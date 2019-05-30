@@ -29,6 +29,7 @@ typedef struct {
 typedef struct {
     // There will never be more than 2 decks of cards in a stack
     Card cards[104];
+    int num_cards;
     SDL_Rect rect;
 } Stack;
 
@@ -79,6 +80,17 @@ void draw_card(SDL_Renderer *renderer, CardTextures *textures, Card *card, SDL_R
     }
 }
 
+void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, SDL_Rect *card_rect) {
+    int offset = card_rect->h / 4;
+    if (card_rect->h + (offset - 1) * stack->num_cards > stack->rect.h) {
+        offset = (stack->rect.h - card_rect->h) / stack->num_cards;
+    }
+    for (int i = 0; i < stack->num_cards; i++) {
+        SDL_Rect rect = make_rect(card_rect->x, stack->rect.y + (offset * i), card_rect->w, card_rect->h);
+        draw_card(renderer, textures, &stack->cards[i], &rect);
+    }
+}
+
 int main(int argc, char* argv[]) {
     int quit = FALSE;
     SDL_Event event;
@@ -116,14 +128,22 @@ int main(int argc, char* argv[]) {
         int card_height = card_width * 7 / 5;
 
         for (int suit = 0; suit < 4; suit++) {
+            Stack stack;
+            stack.rect = make_rect(suit * card_width + 3, 3, card_width - 5, screen_height - 6);
+            stack.num_cards = 0;
+
+
             for (int rank = 0; rank < 13; rank++) {
-                Card *card;
-                card->rank = rank;
-                card->suit = suit;
-                card->orientation = rank % 3;
-                SDL_Rect card_rect = make_rect(rank * card_width + 3, card_height * suit + 5, card_width - 5, card_height - 5);
-                draw_card(renderer, card_textures, card, &card_rect);
+                Card card;
+                card.rank = rank;
+                card.suit = suit;
+                card.orientation = rank % 3;
+                stack.cards[rank] = card;
+                stack.num_cards++;
+                /* draw_card(renderer, card_textures, card, &card_rect); */
             }
+            SDL_Rect card_rect = make_rect(suit * card_width + 3, card_height + 5, card_width - 5, card_height - 5);
+            draw_stack(renderer, card_textures, &stack, &card_rect);
         }
 
         SDL_RenderPresent(renderer);
