@@ -1,6 +1,9 @@
-#include "stdio.h"
-#include "SDL2/SDL.h"
-#include "SDL2/SDL_image.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdlib.h>
+#include <time.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #define FALSE 0
 #define TRUE 1
@@ -91,7 +94,20 @@ void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, SD
     }
 }
 
+void shuffle(Card *deck, size_t num_cards) {
+    if (num_cards > 1) {
+        size_t i;
+        for (i = 0; i < num_cards - 1; i++) {
+            size_t j = i + rand() / (RAND_MAX / (num_cards - i) + 1);
+            Card card = deck[j];
+            deck[j] = deck[i];
+            deck[i] = card;
+        }
+    }
+}
+
 int main(int argc, char* argv[]) {
+    srand(time(NULL));
     int quit = FALSE;
     SDL_Event event;
 
@@ -112,6 +128,31 @@ int main(int argc, char* argv[]) {
 
     SDL_SetRenderDrawColor(renderer, 0, 100, 0, 255);
 
+    // Create a deck from two standard 52-card decks of cards.
+    Card *deck = malloc(sizeof(Card) * 104);
+    for (int suit = 0; suit < 4; suit++) {
+        for (int rank = 0; rank < 13; rank++) {
+            Card card;
+            card.suit = suit;
+            card.rank = rank;
+            card.orientation = 1;
+            deck[suit * 13 + rank] = card;
+            deck[52 + suit * 13 + rank] = card;
+        }
+    }
+    shuffle(deck, 104);
+
+    Stack stacks[10];
+    for (int i = 0; i < 10; i++) {
+        stacks[i].num_cards = 0;
+        stacks[i].rect = make_rect(screen_width / 10 * i + 3, 3, screen_width / 10 - 5, screen_height - 5);
+    }
+    for (int i = 0; i < 104; i++) {
+        Stack *stack = &stacks[i % 10];
+        stack->cards[stack->num_cards] = deck[i];
+        stack->num_cards++;
+    }
+
     while (!quit) {
         SDL_WaitEvent(&event);
 
@@ -124,31 +165,19 @@ int main(int argc, char* argv[]) {
         SDL_RenderClear(renderer);
 
         SDL_GetWindowSize(window, &screen_width, &screen_height);
-        int card_width = screen_width / 13;
+        int card_width = screen_width / 10;
         int card_height = card_width * 7 / 5;
 
-        for (int suit = 0; suit < 4; suit++) {
-            Stack stack;
-            stack.rect = make_rect(suit * card_width + 3, 3, card_width - 5, screen_height - 6);
-            stack.num_cards = 0;
-
-
-            for (int rank = 0; rank < 13; rank++) {
-                Card card;
-                card.rank = rank;
-                card.suit = suit;
-                card.orientation = rank % 3;
-                stack.cards[rank] = card;
-                stack.num_cards++;
-                /* draw_card(renderer, card_textures, card, &card_rect); */
-            }
-            SDL_Rect card_rect = make_rect(suit * card_width + 3, card_height + 5, card_width - 5, card_height - 5);
-            draw_stack(renderer, card_textures, &stack, &card_rect);
+        for (int i = 0; i < 10; i++) {
+            stacks[i].rect = make_rect(screen_width / 10 * i + 3, 3, screen_width / 10 - 5, screen_height - 5);
+            SDL_Rect card_rect = make_rect(screen_width / 10 * i + 3, card_height + 5, card_width - 5, card_height - 5);
+            draw_stack(renderer, card_textures, &stacks[i], &card_rect);
         }
 
         SDL_RenderPresent(renderer);
     }
 
+    free(deck);
     SDL_DestroyTexture(card_textures->back);
     SDL_DestroyTexture(card_textures->front);
     SDL_DestroyTexture(card_textures->suits);
