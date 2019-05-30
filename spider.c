@@ -20,6 +20,18 @@ typedef struct {
     SDL_Texture *text;
 } CardTextures;
 
+typedef struct {
+    int suit;
+    int rank;
+    int orientation;
+} Card;
+
+typedef struct {
+    // There will never be more than 2 decks of cards in a stack
+    Card cards[104];
+    SDL_Rect rect;
+} Stack;
+
 int init_sdl() {
     int result = SDL_Init(SDL_INIT_VIDEO);
     if (result != 0) {
@@ -51,14 +63,20 @@ SDL_Rect make_rect(int x, int y, int w, int h) {
     return r;
 }
 
-void draw_card(SDL_Renderer *renderer, CardTextures *textures, int rank, int suit, SDL_Rect *rect) {
-    SDL_Rect suit_srcrect = make_rect(suit * SUIT_WIDTH, 0, SUIT_WIDTH, SUIT_HEIGHT);
-    SDL_Rect text_srcrect = make_rect(rank * TEXT_WIDTH, (suit / 2) * TEXT_HEIGHT, TEXT_WIDTH, TEXT_HEIGHT);
-    SDL_Rect suit_dstrect = make_rect(rect->x + rect->w / 8, rect->y + rect->h / 4, rect->w / 4, rect->w / 4);
-    SDL_Rect text_dstrect = make_rect(rect->x + rect->w / 2, rect->y + rect->h / 4, rect->w / 2, rect->w / 4);
-    SDL_RenderCopy(renderer, textures->front, NULL, rect);
-    SDL_RenderCopy(renderer, textures->suits, &suit_srcrect, &suit_dstrect);
-    SDL_RenderCopy(renderer, textures->text, &text_srcrect, &text_dstrect);
+void draw_card(SDL_Renderer *renderer, CardTextures *textures, Card *card, SDL_Rect *rect) {
+    if (card->orientation == 1) {
+        SDL_Rect suit_srcrect = make_rect(card->suit * SUIT_WIDTH, 0, SUIT_WIDTH, SUIT_HEIGHT);
+        SDL_Rect text_srcrect = make_rect(card->rank * TEXT_WIDTH, (card->suit / 2) * TEXT_HEIGHT, TEXT_WIDTH, TEXT_HEIGHT);
+        SDL_Rect suit_dstrect = make_rect(rect->x + rect->w / 12, rect->y + rect->h / 16, rect->w / 4, rect->w / 4);
+        SDL_Rect text_dstrect = make_rect(rect->x + rect->w / 12 * 5, rect->y + rect->h / 16, rect->w / 2, rect->w / 4);
+        SDL_Rect suit_center_dstrect = make_rect(rect->x + rect->w / 4, rect->y + rect->h / 3, rect->w / 2, rect->w / 2);
+        SDL_RenderCopy(renderer, textures->front, NULL, rect);
+        SDL_RenderCopy(renderer, textures->suits, &suit_srcrect, &suit_dstrect);
+        SDL_RenderCopy(renderer, textures->text, &text_srcrect, &text_dstrect);
+        SDL_RenderCopy(renderer, textures->suits, &suit_srcrect, &suit_center_dstrect);
+    } else {
+        SDL_RenderCopy(renderer, textures->back, NULL, rect);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -99,8 +117,12 @@ int main(int argc, char* argv[]) {
 
         for (int suit = 0; suit < 4; suit++) {
             for (int rank = 0; rank < 13; rank++) {
+                Card *card;
+                card->rank = rank;
+                card->suit = suit;
+                card->orientation = rank % 3;
                 SDL_Rect card_rect = make_rect(rank * card_width + 3, card_height * suit + 5, card_width - 5, card_height - 5);
-                draw_card(renderer, card_textures, rank, suit, &card_rect);
+                draw_card(renderer, card_textures, card, &card_rect);
             }
         }
 
