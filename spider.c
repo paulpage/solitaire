@@ -106,6 +106,8 @@ void shuffle(Card *deck, size_t num_cards) {
     }
 }
 
+
+
 int main(int argc, char* argv[]) {
     srand(time(NULL));
     int quit = FALSE;
@@ -162,17 +164,28 @@ int main(int argc, char* argv[]) {
                 break;
         }
 
+        Card active_card;
+        active_card.suit = 2;
+        active_card.rank = 4;
+        active_card.orientation = 1;
+        
+        int mouse_x, mouse_y;
+        SDL_GetMouseState(&mouse_x, &mouse_y);
+
         SDL_RenderClear(renderer);
 
         SDL_GetWindowSize(window, &screen_width, &screen_height);
         int card_width = screen_width / 10;
         int card_height = card_width * 7 / 5;
 
+        SDL_Rect active_card_rect = make_rect(mouse_x - card_width / 2, mouse_y - card_width / 2, card_width, card_height);
+
         for (int i = 0; i < 10; i++) {
             stacks[i].rect = make_rect(screen_width / 10 * i + 3, 3, screen_width / 10 - 5, screen_height - 5);
             SDL_Rect card_rect = make_rect(screen_width / 10 * i + 3, card_height + 5, card_width - 5, card_height - 5);
             draw_stack(renderer, card_textures, &stacks[i], &card_rect);
         }
+        draw_card(renderer, card_textures, &active_card, &active_card_rect);
 
         SDL_RenderPresent(renderer);
     }
