@@ -253,26 +253,29 @@ int main(int argc, char* argv[]) {
     mouse_stack.num_cards = 0;
     mouse_stack.rect = make_rect(0, 0, card_dimensions.w, window_state.height);
     SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
+    mouse_stack.rect.x -= card_dimensions.w / 2;
+    mouse_stack.rect.y -= card_dimensions.h / 2;
 
     while (!quit) {
         SDL_WaitEvent(&event);
 
-        Stack *target_stack;
+        int target_idx = (mouse_stack.rect.x + (card_dimensions.w / 2)) / card_dimensions.w;
+        target_idx = (target_idx < 0 ? 0 : target_idx);
+        target_idx = (target_idx > 10 - 1 ? 10 - 1 : target_idx);
         switch (event.type) {
             case SDL_QUIT:
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                target_stack = &stacks[mouse_stack.rect.x / card_dimensions.w];
                 move_stack(
-                        target_stack,
+                        &stacks[target_idx],
                         &mouse_stack,
-                        get_card_at_mouse_y(&window_state, target_stack, &card_dimensions));
+                        get_card_at_mouse_y(&window_state, &stacks[target_idx], &card_dimensions));
                 break;
             case SDL_MOUSEBUTTONUP:
                 move_stack(
                         &mouse_stack,
-                        &stacks[(mouse_stack.rect.x + (card_dimensions.w / 2)) / card_dimensions.w],
+                        &stacks[target_idx],
                         0);
                 break;
 
@@ -281,7 +284,7 @@ int main(int argc, char* argv[]) {
         SDL_GetMouseState(&(window_state.mouse_x), &(window_state.mouse_y));
         SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
         mouse_stack.rect.x -= card_dimensions.w / 2;
-        mouse_stack.rect.y -= card_dimensions.h / 2;
+        mouse_stack.rect.y -= card_dimensions.h / 4;
 
         SDL_RenderClear(renderer);
 
