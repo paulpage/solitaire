@@ -20,6 +20,11 @@ typedef struct {
     bool mouse_down;
 } WindowState;
 
+typedef struct {
+    int w;
+    int h;
+} CardDimensions;
+
 /* Textures used to render cards */
 typedef struct {
     SDL_Texture *back;
@@ -109,22 +114,23 @@ void draw_card(SDL_Renderer *renderer, CardTextures *textures,
     }
 }
 
-int get_stack_offset(Stack *stack, SDL_Rect *card_rect) {
-    int offset = card_rect->h / 4;
-    if (card_rect->h + (offset - 1) * stack->num_cards > stack->rect.h) {
-        offset = (stack->rect.h - card_rect->h) / stack->num_cards;
+int get_stack_offset(Stack *stack, CardDimensions *card_dimensions) {
+    int offset = card_dimensions->h / 4;
+    if (card_dimensions->h + (offset - 1) * stack->num_cards > stack->rect.h) {
+        offset = (stack->rect.h - card_dimensions->h) / stack->num_cards;
     }
     return offset;
 }
 
-void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, SDL_Rect *card_rect) {
-    int offset = get_stack_offset(stack, card_rect);
+void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, CardDimensions *card_dimensions) {
+    int offset = get_stack_offset(stack, card_dimensions);
+    int margin = card_dimensions->w / 16;
     for (int i = 0; i < stack->num_cards; i++) {
         SDL_Rect rect = make_rect(
-                card_rect->x,
-                stack->rect.y + (offset * i),
-                card_rect->w,
-                card_rect->h);
+                stack->rect.x + margin,
+                stack->rect.y + (offset * i) + margin,
+                card_dimensions->w - (2 * margin),
+                card_dimensions->h - (2 * margin));
         draw_card(renderer, textures, &stack->cards[i], &rect);
     }
 }
@@ -155,13 +161,13 @@ void move_stack(Stack *srcstack, Stack *dststack, int srcidx) {
     assert(srcstack->num_cards == srcidx);
 }
 
-int get_card_at_mouse_y(WindowState *window_state, Stack *stack, SDL_Rect *card_rect) {
+int get_card_at_mouse_y(WindowState *window_state, Stack *stack, CardDimensions *card_dimensions) {
 
     /* Mouse position relative to the stack */
     int mouse_rel_y = window_state->mouse_y - stack->rect.y;
 
     /* The gap between the tops of the cards in the stack */
-    int offset = get_stack_offset(stack, card_rect);
+    int offset = get_stack_offset(stack, card_dimensions);
 
     /* 
      * The mouse will either be on a card buried in the stack, on the last
@@ -169,7 +175,7 @@ int get_card_at_mouse_y(WindowState *window_state, Stack *stack, SDL_Rect *card_
      */
     if (mouse_rel_y / offset <= stack->num_cards - 1) {
         return mouse_rel_y / offset;
-    } else if (mouse_rel_y <= offset * (stack->num_cards - 1) + card_rect->h) {
+    } else if (mouse_rel_y <= offset * (stack->num_cards - 1) + card_dimensions->h) {
         return stack->num_cards - 1;
     }
     return -1;
@@ -239,13 +245,14 @@ int main(int argc, char* argv[]) {
         stack->num_cards++;
     }
 
-    int card_width = window_state.width / 10;
-    int card_height = card_width * 7 / 5;
+    CardDimensions card_dimensions = {
+        .w = window_state.width / 10,
+        .h = (window_state.width / 10) * 7 / 5,
+    };
     Stack mouse_stack;
     mouse_stack.num_cards = 0;
-    mouse_stack.rect = make_rect(0, 0, card_width, window_state.height);
+    mouse_stack.rect = make_rect(0, 0, card_dimensions.w, window_state.height);
     SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-    SDL_Rect card_rect = make_rect(0, 0, card_width, card_height);
 
     while (!quit) {
         SDL_WaitEvent(&event);
@@ -256,17 +263,16 @@ int main(int argc, char* argv[]) {
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                target_stack = &stacks[mouse_stack.rect.x / card_width];
+                target_stack = &stacks[mouse_stack.rect.x / card_dimensions.w];
                 move_stack(
                         target_stack,
                         &mouse_stack,
-                        get_card_at_mouse_y(&window_state, target_stack, &card_rect));
+                        get_card_at_mouse_y(&window_state, target_stack, &card_dimensions));
                 break;
             case SDL_MOUSEBUTTONUP:
-                printf("[%d, %d]", card_width, mouse_stack.rect.x);
                 move_stack(
                         &mouse_stack,
-                        &stacks[(mouse_stack.rect.x + (card_width / 2)) / card_width],
+                        &stacks[(mouse_stack.rect.x + (card_dimensions.w / 2)) / card_dimensions.w],
                         0);
                 break;
 
@@ -274,14 +280,14 @@ int main(int argc, char* argv[]) {
 
         SDL_GetMouseState(&(window_state.mouse_x), &(window_state.mouse_y));
         SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-        mouse_stack.rect.x -= card_rect.w / 2;
-        mouse_stack.rect.y -= card_rect.h / 2;
+        mouse_stack.rect.x -= card_dimensions.w / 2;
+        mouse_stack.rect.y -= card_dimensions.h / 2;
 
         SDL_RenderClear(renderer);
 
         SDL_GetWindowSize(window, &window_state.width, &window_state.height);
-        card_width = window_state.width / 10;
-        card_height = card_width * 7 / 5;
+        card_dimensions.w = window_state.width / 10;
+        card_dimensions.h = card_dimensions.w * 7 / 5;
 
 
         for (int i = 0; i < 10; i++) {
@@ -290,24 +296,14 @@ int main(int argc, char* argv[]) {
                     3,
                     window_state.width / 10 - 5,
                     window_state.height - 5);
-            card_rect = make_rect(
-                    window_state.width / 10 * i + 3,
-                    card_height + 5,
-                    card_width - 5,
-                    card_height - 5);
-            draw_stack(renderer, &card_textures, &stacks[i], &card_rect);
+            draw_stack(renderer, &card_textures, &stacks[i], &card_dimensions);
         }
 
-        SDL_Rect active_card_rect = make_rect(
-                mouse_stack.rect.x,
-                mouse_stack.rect.y,
-                card_width,
-                card_height);
         draw_stack(
                 renderer,
                 &card_textures,
                 &mouse_stack,
-                &active_card_rect);
+                &card_dimensions);
         SDL_RenderPresent(renderer);
     }
 
