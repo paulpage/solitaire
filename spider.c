@@ -1,21 +1,26 @@
+#include <assert.h>
+#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdlib.h>
 #include <time.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
-#define FALSE 0
-#define TRUE 1
-
+/* Costants representing the dimensions of the suit and text sprites */
 #define SUIT_WIDTH 128
 #define SUIT_HEIGHT 128
 #define TEXT_WIDTH 256
 #define TEXT_HEIGHT 128
 
-int screen_width = 640;
-int screen_height = 480;
+typedef struct {
+    int width;
+    int height;
+    int mouse_x;
+    int mouse_y;
+    bool mouse_down;
+} WindowState;
 
+/* Textures used to render cards */
 typedef struct {
     SDL_Texture *back;
     SDL_Texture *front;
@@ -29,8 +34,9 @@ typedef struct {
     int orientation;
 } Card;
 
+/* A stack of cards */
 typedef struct {
-    // There will never be more than 2 decks of cards in a stack
+    /* There will never be more than 2 decks of cards in a stack */
     Card cards[104];
     int num_cards;
     SDL_Rect rect;
@@ -51,7 +57,8 @@ int init_img() {
 SDL_Texture * create_texture_from_png(SDL_Renderer *renderer, char* filename) {
     SDL_Surface *surface = IMG_Load(filename);
     if (surface == NULL) {
-        printf("Unable to load image %s. SDL Error: %s\n", filename, SDL_GetError());
+        printf("Unable to load image %s. SDL Error: %s\n",
+                filename, SDL_GetError());
     }
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
     SDL_FreeSurface(surface);
@@ -67,29 +74,57 @@ SDL_Rect make_rect(int x, int y, int w, int h) {
     return r;
 }
 
-void draw_card(SDL_Renderer *renderer, CardTextures *textures, Card *card, SDL_Rect *rect) {
+void draw_card(SDL_Renderer *renderer, CardTextures *textures,
+        Card *card, SDL_Rect *rect) {
     if (card->orientation == 1) {
-        SDL_Rect suit_srcrect = make_rect(card->suit * SUIT_WIDTH, 0, SUIT_WIDTH, SUIT_HEIGHT);
-        SDL_Rect text_srcrect = make_rect(card->rank * TEXT_WIDTH, (card->suit / 2) * TEXT_HEIGHT, TEXT_WIDTH, TEXT_HEIGHT);
-        SDL_Rect suit_dstrect = make_rect(rect->x + rect->w / 12, rect->y + rect->h / 16, rect->w / 4, rect->w / 4);
-        SDL_Rect text_dstrect = make_rect(rect->x + rect->w / 12 * 5, rect->y + rect->h / 16, rect->w / 2, rect->w / 4);
-        SDL_Rect suit_center_dstrect = make_rect(rect->x + rect->w / 4, rect->y + rect->h / 3, rect->w / 2, rect->w / 2);
+        SDL_Rect suit_srcrect = make_rect(
+                card->suit * SUIT_WIDTH, 0, SUIT_WIDTH, SUIT_HEIGHT);
+        SDL_Rect text_srcrect = make_rect(
+                card->rank * TEXT_WIDTH,
+                (card->suit / 2) * TEXT_HEIGHT,
+                TEXT_WIDTH,
+                TEXT_HEIGHT);
+        SDL_Rect suit_dstrect = make_rect(
+                rect->x + rect->w / 12,
+                rect->y + rect->h / 16,
+                rect->w / 4,
+                rect->w / 4);
+        SDL_Rect text_dstrect = make_rect(
+                rect->x + rect->w / 12 * 5,
+                rect->y + rect->h / 16,
+                rect->w / 2,
+                rect->w / 4);
+        SDL_Rect suit_center_dstrect = make_rect(
+                rect->x + rect->w / 4,
+                rect->y + rect->h / 3,
+                rect->w / 2,
+                rect->w / 2);
         SDL_RenderCopy(renderer, textures->front, NULL, rect);
         SDL_RenderCopy(renderer, textures->suits, &suit_srcrect, &suit_dstrect);
         SDL_RenderCopy(renderer, textures->text, &text_srcrect, &text_dstrect);
-        SDL_RenderCopy(renderer, textures->suits, &suit_srcrect, &suit_center_dstrect);
+        SDL_RenderCopy(
+                renderer, textures->suits, &suit_srcrect, &suit_center_dstrect);
     } else {
         SDL_RenderCopy(renderer, textures->back, NULL, rect);
     }
 }
 
-void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, SDL_Rect *card_rect) {
+int get_stack_offset(Stack *stack, SDL_Rect *card_rect) {
     int offset = card_rect->h / 4;
     if (card_rect->h + (offset - 1) * stack->num_cards > stack->rect.h) {
         offset = (stack->rect.h - card_rect->h) / stack->num_cards;
     }
+    return offset;
+}
+
+void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, SDL_Rect *card_rect) {
+    int offset = get_stack_offset(stack, card_rect);
     for (int i = 0; i < stack->num_cards; i++) {
-        SDL_Rect rect = make_rect(card_rect->x, stack->rect.y + (offset * i), card_rect->w, card_rect->h);
+        SDL_Rect rect = make_rect(
+                card_rect->x,
+                stack->rect.y + (offset * i),
+                card_rect->w,
+                card_rect->h);
         draw_card(renderer, textures, &stack->cards[i], &rect);
     }
 }
@@ -106,27 +141,72 @@ void shuffle(Card *deck, size_t num_cards) {
     }
 }
 
+void move_stack(Stack *srcstack, Stack *dststack, int srcidx) {
+    if (srcidx < 0) {
+        return;
+    }
+    int end = srcstack->num_cards;
+    for (int i = srcidx; i < end; i++) {
+        dststack->cards[dststack->num_cards] =
+            srcstack->cards[i];
+        dststack->num_cards++;
+        srcstack->num_cards--;
+    }
+    assert(srcstack->num_cards == srcidx);
+}
 
+int get_card_at_mouse_y(WindowState *window_state, Stack *stack, SDL_Rect *card_rect) {
+
+    /* Mouse position relative to the stack */
+    int mouse_rel_y = window_state->mouse_y - stack->rect.y;
+
+    /* The gap between the tops of the cards in the stack */
+    int offset = get_stack_offset(stack, card_rect);
+
+    /* 
+     * The mouse will either be on a card buried in the stack, on the last
+     * card on the stack, or below the stack.
+     */
+    if (mouse_rel_y / offset <= stack->num_cards - 1) {
+        return mouse_rel_y / offset;
+    } else if (mouse_rel_y <= offset * (stack->num_cards - 1) + card_rect->h) {
+        return stack->num_cards - 1;
+    }
+    return -1;
+}
 
 int main(int argc, char* argv[]) {
     srand(time(NULL));
-    int quit = FALSE;
+    bool quit = false;
     SDL_Event event;
 
     init_sdl();
     init_img();
 
-    SDL_Window *window = SDL_CreateWindow("Spider Solitaire", 
-            SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-            screen_width, screen_height, SDL_WINDOW_RESIZABLE);
+    WindowState window_state = {
+        .width = 640,
+        .height = 480,
+        .mouse_x = 0,
+        .mouse_y = 0,
+        .mouse_down = false,
+    };
+
+    SDL_Window *window = SDL_CreateWindow(
+            "Spider Solitaire",
+            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_UNDEFINED,
+            window_state.width,
+            window_state.height,
+            SDL_WINDOW_RESIZABLE);
     
     SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
 
-    CardTextures *card_textures = malloc(sizeof(CardTextures));
-    card_textures->back  = create_texture_from_png(renderer, "card_back.png");
-    card_textures->front = create_texture_from_png(renderer, "card_front.png");
-    card_textures->suits = create_texture_from_png(renderer, "suits.png");
-    card_textures->text  = create_texture_from_png(renderer, "text.png");
+    CardTextures card_textures = {
+        .back  = create_texture_from_png(renderer, "card_back.png"),
+        .front = create_texture_from_png(renderer, "card_front.png"),
+        .suits = create_texture_from_png(renderer, "suits.png"),
+        .text  = create_texture_from_png(renderer, "text.png"),
+    };
 
     SDL_SetRenderDrawColor(renderer, 0, 100, 0, 255);
 
@@ -144,10 +224,14 @@ int main(int argc, char* argv[]) {
     }
     shuffle(deck, 104);
 
-    Stack stacks[10];
+    Stack *stacks = malloc(sizeof(Stack) * 10);
     for (int i = 0; i < 10; i++) {
         stacks[i].num_cards = 0;
-        stacks[i].rect = make_rect(screen_width / 10 * i + 3, 3, screen_width / 10 - 5, screen_height - 5);
+        stacks[i].rect = make_rect(
+                window_state.width / 10 * i + 3,
+                3,
+                window_state.width / 10 - 5,
+                window_state.height - 5);
     }
     for (int i = 0; i < 104; i++) {
         Stack *stack = &stacks[i % 10];
@@ -155,47 +239,85 @@ int main(int argc, char* argv[]) {
         stack->num_cards++;
     }
 
+    int card_width = window_state.width / 10;
+    int card_height = card_width * 7 / 5;
+    Stack mouse_stack;
+    mouse_stack.num_cards = 0;
+    mouse_stack.rect = make_rect(0, 0, card_width, window_state.height);
+    SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
+    SDL_Rect card_rect = make_rect(0, 0, card_width, card_height);
+
     while (!quit) {
         SDL_WaitEvent(&event);
 
+        Stack *target_stack;
         switch (event.type) {
             case SDL_QUIT:
-                quit = TRUE;
+                quit = true;
                 break;
+            case SDL_MOUSEBUTTONDOWN:
+                target_stack = &stacks[mouse_stack.rect.x / card_width];
+                move_stack(
+                        target_stack,
+                        &mouse_stack,
+                        get_card_at_mouse_y(&window_state, target_stack, &card_rect));
+                break;
+            case SDL_MOUSEBUTTONUP:
+                printf("[%d, %d]", card_width, mouse_stack.rect.x);
+                move_stack(
+                        &mouse_stack,
+                        &stacks[(mouse_stack.rect.x + (card_width / 2)) / card_width],
+                        0);
+                break;
+
         }
 
-        Card active_card;
-        active_card.suit = 2;
-        active_card.rank = 4;
-        active_card.orientation = 1;
-        
-        int mouse_x, mouse_y;
-        SDL_GetMouseState(&mouse_x, &mouse_y);
+        SDL_GetMouseState(&(window_state.mouse_x), &(window_state.mouse_y));
+        SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
+        mouse_stack.rect.x -= card_rect.w / 2;
+        mouse_stack.rect.y -= card_rect.h / 2;
 
         SDL_RenderClear(renderer);
 
-        SDL_GetWindowSize(window, &screen_width, &screen_height);
-        int card_width = screen_width / 10;
-        int card_height = card_width * 7 / 5;
+        SDL_GetWindowSize(window, &window_state.width, &window_state.height);
+        card_width = window_state.width / 10;
+        card_height = card_width * 7 / 5;
 
-        SDL_Rect active_card_rect = make_rect(mouse_x - card_width / 2, mouse_y - card_width / 2, card_width, card_height);
 
         for (int i = 0; i < 10; i++) {
-            stacks[i].rect = make_rect(screen_width / 10 * i + 3, 3, screen_width / 10 - 5, screen_height - 5);
-            SDL_Rect card_rect = make_rect(screen_width / 10 * i + 3, card_height + 5, card_width - 5, card_height - 5);
-            draw_stack(renderer, card_textures, &stacks[i], &card_rect);
+            stacks[i].rect = make_rect(
+                    window_state.width / 10 * i + 3,
+                    3,
+                    window_state.width / 10 - 5,
+                    window_state.height - 5);
+            card_rect = make_rect(
+                    window_state.width / 10 * i + 3,
+                    card_height + 5,
+                    card_width - 5,
+                    card_height - 5);
+            draw_stack(renderer, &card_textures, &stacks[i], &card_rect);
         }
-        draw_card(renderer, card_textures, &active_card, &active_card_rect);
 
+        SDL_Rect active_card_rect = make_rect(
+                mouse_stack.rect.x,
+                mouse_stack.rect.y,
+                card_width,
+                card_height);
+        draw_stack(
+                renderer,
+                &card_textures,
+                &mouse_stack,
+                &active_card_rect);
         SDL_RenderPresent(renderer);
     }
 
+    /* Clean up */
     free(deck);
-    SDL_DestroyTexture(card_textures->back);
-    SDL_DestroyTexture(card_textures->front);
-    SDL_DestroyTexture(card_textures->suits);
-    SDL_DestroyTexture(card_textures->text);
-    free(card_textures);
+    free(stacks);
+    SDL_DestroyTexture(card_textures.back);
+    SDL_DestroyTexture(card_textures.front);
+    SDL_DestroyTexture(card_textures.suits);
+    SDL_DestroyTexture(card_textures.text);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     IMG_Quit();
