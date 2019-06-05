@@ -47,7 +47,8 @@ typedef struct {
     SDL_Rect rect;
 } Stack;
 
-int init_sdl() {
+int init_sdl()
+{
     int result = SDL_Init(SDL_INIT_VIDEO);
     if (result != 0) {
         printf("Failed to initialize video. SDL Error: %s\n", SDL_GetError());
@@ -55,11 +56,13 @@ int init_sdl() {
     return result;
 }
 
-int init_img() {
+int init_img()
+{
     return IMG_Init(IMG_INIT_PNG);
 }
 
-SDL_Texture * create_texture_from_png(SDL_Renderer *renderer, char* filename) {
+SDL_Texture * create_texture_from_png(SDL_Renderer *renderer, char* filename)
+{
     SDL_Surface *surface = IMG_Load(filename);
     if (surface == NULL) {
         printf("Unable to load image %s. SDL Error: %s\n",
@@ -70,7 +73,8 @@ SDL_Texture * create_texture_from_png(SDL_Renderer *renderer, char* filename) {
     return texture;
 }
 
-SDL_Rect make_rect(int x, int y, int w, int h) {
+SDL_Rect make_rect(int x, int y, int w, int h)
+{
     SDL_Rect r;
     r.x = x;
     r.y = y;
@@ -114,7 +118,8 @@ void draw_card(SDL_Renderer *renderer, CardTextures *textures,
     }
 }
 
-int get_stack_offset(Stack *stack, CardDimensions *card_dimensions) {
+int get_stack_offset(Stack *stack, CardDimensions *card_dimensions)
+{
     int offset = card_dimensions->h / 4;
     if (card_dimensions->h + (offset - 1) * stack->num_cards > stack->rect.h) {
         offset = (stack->rect.h - card_dimensions->h) / stack->num_cards;
@@ -122,7 +127,9 @@ int get_stack_offset(Stack *stack, CardDimensions *card_dimensions) {
     return offset;
 }
 
-void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, CardDimensions *card_dimensions) {
+void draw_stack(SDL_Renderer *renderer, CardTextures *textures,
+        Stack *stack, CardDimensions *card_dimensions)
+{
     int offset = get_stack_offset(stack, card_dimensions);
     int margin = card_dimensions->w / 16;
     for (int i = 0; i < stack->num_cards; i++) {
@@ -135,7 +142,8 @@ void draw_stack(SDL_Renderer *renderer, CardTextures *textures, Stack *stack, Ca
     }
 }
 
-void shuffle(Card *deck, size_t num_cards) {
+void shuffle(Card *deck, size_t num_cards)
+{
     if (num_cards > 1) {
         size_t i;
         for (i = 0; i < num_cards - 1; i++) {
@@ -147,7 +155,8 @@ void shuffle(Card *deck, size_t num_cards) {
     }
 }
 
-void move_stack(Stack *srcstack, Stack *dststack, int srcidx) {
+void move_stack(Stack *srcstack, Stack *dststack, int srcidx)
+{
     if (srcidx < 0) {
         return;
     }
@@ -161,7 +170,9 @@ void move_stack(Stack *srcstack, Stack *dststack, int srcidx) {
     assert(srcstack->num_cards == srcidx);
 }
 
-int get_card_at_mouse_y(WindowState *window_state, Stack *stack, CardDimensions *card_dimensions) {
+int get_card_at_mouse_y(WindowState *window_state, 
+        Stack *stack, CardDimensions *card_dimensions)
+{
 
     /* Mouse position relative to the stack */
     int mouse_rel_y = window_state->mouse_y - stack->rect.y;
@@ -175,13 +186,15 @@ int get_card_at_mouse_y(WindowState *window_state, Stack *stack, CardDimensions 
      */
     if (mouse_rel_y / offset <= stack->num_cards - 1) {
         return mouse_rel_y / offset;
-    } else if (mouse_rel_y <= offset * (stack->num_cards - 1) + card_dimensions->h) {
+    } else if (mouse_rel_y <= offset * (stack->num_cards - 1)
+            + card_dimensions->h) {
         return stack->num_cards - 1;
     }
     return -1;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     srand(time(NULL));
     bool quit = false;
     SDL_Event event;
@@ -259,7 +272,8 @@ int main(int argc, char* argv[]) {
     while (!quit) {
         SDL_WaitEvent(&event);
 
-        int target_idx = (mouse_stack.rect.x + (card_dimensions.w / 2)) / card_dimensions.w;
+        int target_idx = (mouse_stack.rect.x + (card_dimensions.w / 2))
+            / card_dimensions.w;
         target_idx = (target_idx < 0 ? 0 : target_idx);
         target_idx = (target_idx > 10 - 1 ? 10 - 1 : target_idx);
         switch (event.type) {
@@ -270,7 +284,10 @@ int main(int argc, char* argv[]) {
                 move_stack(
                         &stacks[target_idx],
                         &mouse_stack,
-                        get_card_at_mouse_y(&window_state, &stacks[target_idx], &card_dimensions));
+                        get_card_at_mouse_y(
+                            &window_state,
+                            &stacks[target_idx],
+                            &card_dimensions));
                 break;
             case SDL_MOUSEBUTTONUP:
                 move_stack(
