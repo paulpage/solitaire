@@ -1,4 +1,4 @@
-SRC = graphics.c spider.c
+SRC = cards.c graphics.c spider.c
 OBJ = ${SRC:.c=.o}
 
 CFLAGS = -Wall

@@ -3,6 +3,8 @@
 
 #include <SDL2/SDL.h>
 
+#include "cards.h"
+
 /* Dimensions of the suit and text sprites in pixels. */
 #define SUIT_WIDTH 128
 #define SUIT_HEIGHT 128
@@ -33,12 +35,6 @@ typedef struct {
     int h;
 } CardSize;
 
-typedef struct {
-    int suit;
-    int rank;
-    int orientation;
-} Card; /* TODO: Put in cards */
-
 /* A stack of cards */
 typedef struct {
     /* There will never be more than 2 decks of cards in a stack */
@@ -56,7 +52,6 @@ void draw_stack(
         Graphics *graphics,
         Stack *stack,
         CardSize *card_size);
-void shuffle(Card *deck, size_t num_cards); /* TODO: put in cards */
 void move_stack(Stack *srcstack, Stack *dststack, int srcidx);
 int get_card_at_mouse_y(
         Graphics *graphics, 
