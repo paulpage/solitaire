@@ -1,51 +1,39 @@
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
 
-#include "gui.h"
+#include "graphics.h"
 
 int main(int argc, char* argv[])
 {
+    /* Seed the random number generator */
     srand(time(NULL));
+
+    /* Initialize SDL */
+    if (SDL_Init(SDL_INIT_VIDEO != 0)) {
+        SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
+        return 1;
+    }
+    /* Initialize SDL Image library */
+    IMG_Init(IMG_INIT_PNG);
+
+    Graphics graphics;
+    if (graphics_init(&graphics, "Spider Solitaire") != 0) {
+        SDL_Quit();
+        return 1;
+    }
+
     bool quit = false;
     SDL_Event event;
 
-    init_sdl();
-    init_img();
-
-    WindowState window_state = {
-        .width = 640,
-        .height = 480,
-        .mouse_x = 0,
-        .mouse_y = 0,
-        .mouse_down = false,
-    };
-
-    SDL_Window *window = SDL_CreateWindow(
-            "Spider Solitaire",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            window_state.width,
-            window_state.height,
-            SDL_WINDOW_RESIZABLE);
-    
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
-
-    CardTextures card_textures = {
-        .back  = create_texture_from_png(renderer, "card_back.png"),
-        .front = create_texture_from_png(renderer, "card_front.png"),
-        .suits = create_texture_from_png(renderer, "suits.png"),
-        .text  = create_texture_from_png(renderer, "text.png"),
-    };
-
-    SDL_SetRenderDrawColor(renderer, 0, 100, 0, 255);
+    Card *deck = malloc(sizeof(Card) * 104);
+    Stack *stacks = malloc(sizeof(Stack) * 10);
 
     // Create a deck from two standard 52-card decks of cards.
-    Card *deck = malloc(sizeof(Card) * 104);
     for (int suit = 0; suit < 4; suit++) {
         for (int rank = 0; rank < 13; rank++) {
             Card card;
@@ -58,14 +46,13 @@ int main(int argc, char* argv[])
     }
     shuffle(deck, 104);
 
-    Stack *stacks = malloc(sizeof(Stack) * 10);
     for (int i = 0; i < 10; i++) {
         stacks[i].num_cards = 0;
         stacks[i].rect = make_rect(
-                window_state.width / 10 * i + 3,
+                graphics.width / 10 * i + 3,
                 3,
-                window_state.width / 10 - 5,
-                window_state.height - 5);
+                graphics.width / 10 - 5,
+                graphics.height - 5);
     }
     for (int i = 0; i < 104; i++) {
         Stack *stack = &stacks[i % 10];
@@ -73,22 +60,22 @@ int main(int argc, char* argv[])
         stack->num_cards++;
     }
 
-    CardDimensions card_dimensions = {
-        .w = window_state.width / 10,
-        .h = (window_state.width / 10) * 7 / 5,
+    CardSize card_size = {
+        .w = graphics.width / 10,
+        .h = (graphics.width / 10) * 7 / 5,
     };
     Stack mouse_stack;
     mouse_stack.num_cards = 0;
-    mouse_stack.rect = make_rect(0, 0, card_dimensions.w, window_state.height);
+    mouse_stack.rect = make_rect(0, 0, card_size.w, graphics.height);
     SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-    mouse_stack.rect.x -= card_dimensions.w / 2;
-    mouse_stack.rect.y -= card_dimensions.h / 2;
+    mouse_stack.rect.x -= card_size.w / 2;
+    mouse_stack.rect.y -= card_size.h / 2;
 
     while (!quit) {
         SDL_WaitEvent(&event);
 
-        int target_idx = (mouse_stack.rect.x + (card_dimensions.w / 2))
-            / card_dimensions.w;
+        int target_idx = (mouse_stack.rect.x + (card_size.w / 2))
+            / card_size.w;
         target_idx = (target_idx < 0 ? 0 : target_idx);
         target_idx = (target_idx > 10 - 1 ? 10 - 1 : target_idx);
         switch (event.type) {
@@ -100,9 +87,9 @@ int main(int argc, char* argv[])
                         &stacks[target_idx],
                         &mouse_stack,
                         get_card_at_mouse_y(
-                            &window_state,
+                            &graphics,
                             &stacks[target_idx],
-                            &card_dimensions));
+                            &card_size));
                 break;
             case SDL_MOUSEBUTTONUP:
                 move_stack(
@@ -113,44 +100,37 @@ int main(int argc, char* argv[])
 
         }
 
-        SDL_GetMouseState(&(window_state.mouse_x), &(window_state.mouse_y));
+        SDL_GetMouseState(&(graphics.mouse_x), &(graphics.mouse_y));
         SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-        mouse_stack.rect.x -= card_dimensions.w / 2;
-        mouse_stack.rect.y -= card_dimensions.h / 4;
+        mouse_stack.rect.x -= card_size.w / 2;
+        mouse_stack.rect.y -= card_size.h / 4;
 
-        SDL_RenderClear(renderer);
+        SDL_RenderClear(graphics.renderer);
 
-        SDL_GetWindowSize(window, &window_state.width, &window_state.height);
-        card_dimensions.w = window_state.width / 10;
-        card_dimensions.h = card_dimensions.w * 7 / 5;
+        SDL_GetWindowSize(graphics.window, &graphics.width, &graphics.height);
+        card_size.w = graphics.width / 10;
+        card_size.h = card_size.w * 7 / 5;
 
 
         for (int i = 0; i < 10; i++) {
             stacks[i].rect = make_rect(
-                    window_state.width / 10 * i + 3,
+                    graphics.width / 10 * i + 3,
                     3,
-                    window_state.width / 10 - 5,
-                    window_state.height - 5);
-            draw_stack(renderer, &card_textures, &stacks[i], &card_dimensions);
+                    graphics.width / 10 - 5,
+                    graphics.height - 5);
+            draw_stack(&graphics, &stacks[i], &card_size);
+
         }
 
-        draw_stack(
-                renderer,
-                &card_textures,
-                &mouse_stack,
-                &card_dimensions);
-        SDL_RenderPresent(renderer);
+        draw_stack(&graphics, &mouse_stack, &card_size);
+        SDL_RenderPresent(graphics.renderer);
     }
+
 
     /* Clean up */
     free(deck);
     free(stacks);
-    SDL_DestroyTexture(card_textures.back);
-    SDL_DestroyTexture(card_textures.front);
-    SDL_DestroyTexture(card_textures.suits);
-    SDL_DestroyTexture(card_textures.text);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
+    graphics_free(&graphics);
     IMG_Quit();
     SDL_Quit();
     return 0;

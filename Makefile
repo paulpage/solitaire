@@ -1,4 +1,4 @@
-SRC = gui.c spider.c
+SRC = graphics.c spider.c
 OBJ = ${SRC:.c=.o}
 
 CFLAGS = -Wall
