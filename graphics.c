@@ -214,6 +214,8 @@ void update_graphics(Graphics *graphics, int num_stacks)
                 &(graphics->width),
                 &(graphics->height));
         graphics->card_w = graphics->width / num_stacks;
+        /* Width must be at least 1 to avoid divide by 0 errors */
+        graphics->card_w = graphics->card_w > 0 ? graphics->card_w : 1;
         graphics->card_h = graphics->card_w * 7 / 5;
         SDL_RenderClear(graphics->renderer);
 }
