@@ -23,6 +23,7 @@ int main(int argc, char* argv[])
 
     Graphics graphics;
     if (graphics_init(&graphics, "Spider Solitaire") != 0) {
+        IMG_Quit();
         SDL_Quit();
         return 1;
     }
