@@ -35,6 +35,8 @@ int main(int argc, char* argv[])
     Card *deck = malloc(sizeof(Card) * 104);
     Stack *stacks = malloc(sizeof(Stack) * num_stacks);
 
+    update_graphics(&graphics, num_stacks);
+
     // Create a deck from two standard 52-card decks of cards.
     for (int suit = 0; suit < 4; suit++) {
         for (int rank = 0; rank < 13; rank++) {
@@ -48,27 +50,40 @@ int main(int argc, char* argv[])
     }
     shuffle(deck, 104);
 
+    /* Create stacks */
     for (int i = 0; i < num_stacks; i++) {
         stacks[i].num_cards = 0;
         stacks[i].rect = make_rect(
-                graphics.width / num_stacks * i + 3,
-                3,
-                graphics.width / num_stacks - 5,
-                graphics.height - 5);
+                graphics.width / num_stacks * i,
+                graphics.card_h,
+                graphics.width / num_stacks,
+                graphics.height - graphics.card_h);
     }
-    for (int i = 0; i < 104; i++) {
+
+    /* Populate stacks */
+
+    /* Facedown cards */
+    for (int i = 0; i < 34; i++) {
+        deck[i].orientation = 0;
         Stack *stack = &stacks[i % num_stacks];
         stack->cards[stack->num_cards] = deck[i];
         stack->num_cards++;
     }
-
-    update_graphics(&graphics, num_stacks);
+    /* Faceup cards */
+    for (int i = 34; i < 44; i++) {
+        Stack *stack = &stacks[i % num_stacks];
+        stack->cards[stack->num_cards] = deck[i];
+        stack->num_cards++;
+    }
 
     MouseTarget target;
     Stack mouse_stack;
     mouse_stack.num_cards = 0;
     mouse_stack.rect = make_rect(0, 0, graphics.card_w, graphics.height);
     update_mouse_stack(&graphics, &mouse_stack);
+
+    int src_stack_idx = 0;
+    int dst_stack_idx = 0;
 
     while (!quit) {
         SDL_WaitEvent(&event);
@@ -79,10 +94,15 @@ int main(int argc, char* argv[])
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
+                src_stack_idx = target.stack;
                 move_stack(&stacks[target.stack], &mouse_stack, target.card);
                 break;
             case SDL_MOUSEBUTTONUP:
+                dst_stack_idx = target.stack;
                 move_stack(&mouse_stack, &stacks[target.stack], 0);
+                if (dst_stack_idx != src_stack_idx) {
+                    stacks[src_stack_idx].cards[stacks[src_stack_idx].num_cards - 1].orientation = 1;
+                }
                 break;
         }
 
@@ -91,10 +111,10 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < num_stacks; i++) {
             stacks[i].rect = make_rect(
-                    graphics.width / num_stacks * i + 3,
-                    3,
-                    graphics.width / num_stacks - 5,
-                    graphics.height - 5);
+                    graphics.width / num_stacks * i,
+                    graphics.card_h,
+                    graphics.width / num_stacks,
+                    graphics.height - graphics.card_h);
             draw_stack(&graphics, &stacks[i]);
 
         }
