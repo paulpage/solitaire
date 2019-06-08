@@ -1,4 +1,4 @@
-SRC = cards.c graphics.c spider.c
+SRC = cards.c graphics.c
 OBJ = ${SRC:.c=.o}
 
 CFLAGS = -Wall -g
@@ -9,8 +9,11 @@ default: spider
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
-spider: ${OBJ}
-	${CC} -o $@ ${OBJ} ${LDFLAGS}
+example: ${OBJ} example.o
+	${CC} -o $@ $^ ${LDFLAGS}
+
+spider: ${OBJ} spider.o
+	${CC} -o $@ $^ ${LDFLAGS}
 
 clean:
 	rm -f spider *.o
