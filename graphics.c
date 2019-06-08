@@ -129,7 +129,11 @@ int get_stack_offset(Graphics *graphics, Stack *stack)
     if (graphics->card_h + (offset - 1) * stack->num_cards > stack->rect.h) {
         offset = (stack->rect.h - graphics->card_h) / (stack->num_cards - 1);
     }
-    return offset;
+    /*
+     * Don't return 0 offset because future calculations will
+     * divide by the offset
+     */
+    return offset > 0 ? offset : 1;
 }
 
 void draw_stack(Graphics *graphics, Stack *stack)
