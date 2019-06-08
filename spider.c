@@ -68,9 +68,7 @@ int main(int argc, char* argv[])
     Stack mouse_stack;
     mouse_stack.num_cards = 0;
     mouse_stack.rect = make_rect(0, 0, graphics.card_w, graphics.height);
-    SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-    mouse_stack.rect.x -= graphics.card_w / 2;
-    mouse_stack.rect.y -= graphics.card_h / 2;
+    update_mouse_stack(&graphics, &mouse_stack);
 
     while (!quit) {
         SDL_WaitEvent(&event);
@@ -89,9 +87,7 @@ int main(int argc, char* argv[])
         }
 
         update_graphics(&graphics, num_stacks);
-        SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-        mouse_stack.rect.x -= graphics.card_w / 2;
-        mouse_stack.rect.y -= graphics.card_h / 4;
+        update_mouse_stack(&graphics, &mouse_stack);
 
         for (int i = 0; i < num_stacks; i++) {
             stacks[i].rect = make_rect(

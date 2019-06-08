@@ -72,5 +72,6 @@ MouseTarget get_mouse_target(
         Stack **stacks,
         int num_stacks);
 void update_graphics(Graphics *graphics, int num_stacks);
+void update_mouse_stack(Graphics *graphics, Stack *mouse_stacks);
 
 #endif

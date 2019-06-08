@@ -213,3 +213,9 @@ void update_graphics(Graphics *graphics, int num_stacks)
         graphics->card_h = graphics->card_w * 7 / 5;
         SDL_RenderClear(graphics->renderer);
 }
+
+void update_mouse_stack(Graphics *graphics, Stack *mouse_stack)
+{
+    mouse_stack->rect.x = graphics->mouse_x - graphics->card_w / 2;
+    mouse_stack->rect.y = graphics->mouse_y - graphics->card_h / 4;
+}
