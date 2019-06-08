@@ -1,7 +1,7 @@
 SRC = cards.c graphics.c spider.c
 OBJ = ${SRC:.c=.o}
 
-CFLAGS = -Wall
+CFLAGS = -Wall -g
 LDFLAGS = -lSDL2 -lSDL2_image
 
 default: spider

@@ -31,8 +31,9 @@ int main(int argc, char* argv[])
     bool quit = false;
     SDL_Event event;
 
+    int num_stacks = 10;
     Card *deck = malloc(sizeof(Card) * 104);
-    Stack *stacks = malloc(sizeof(Stack) * 10);
+    Stack *stacks = malloc(sizeof(Stack) * num_stacks);
 
     // Create a deck from two standard 52-card decks of cards.
     for (int suit = 0; suit < 4; suit++) {
@@ -47,86 +48,64 @@ int main(int argc, char* argv[])
     }
     shuffle(deck, 104);
 
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < num_stacks; i++) {
         stacks[i].num_cards = 0;
         stacks[i].rect = make_rect(
-                graphics.width / 10 * i + 3,
+                graphics.width / num_stacks * i + 3,
                 3,
-                graphics.width / 10 - 5,
+                graphics.width / num_stacks - 5,
                 graphics.height - 5);
     }
     for (int i = 0; i < 104; i++) {
-        Stack *stack = &stacks[i % 10];
+        Stack *stack = &stacks[i % num_stacks];
         stack->cards[stack->num_cards] = deck[i];
         stack->num_cards++;
     }
 
-    CardSize card_size = {
-        .w = graphics.width / 10,
-        .h = (graphics.width / 10) * 7 / 5,
-    };
+    update_graphics(&graphics, num_stacks);
+
+    MouseTarget target;
     Stack mouse_stack;
     mouse_stack.num_cards = 0;
-    mouse_stack.rect = make_rect(0, 0, card_size.w, graphics.height);
+    mouse_stack.rect = make_rect(0, 0, graphics.card_w, graphics.height);
     SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-    mouse_stack.rect.x -= card_size.w / 2;
-    mouse_stack.rect.y -= card_size.h / 2;
+    mouse_stack.rect.x -= graphics.card_w / 2;
+    mouse_stack.rect.y -= graphics.card_h / 2;
 
     while (!quit) {
         SDL_WaitEvent(&event);
 
-        int target_idx = (mouse_stack.rect.x + (card_size.w / 2))
-            / card_size.w;
-        target_idx = (target_idx < 0 ? 0 : target_idx);
-        target_idx = (target_idx > 10 - 1 ? 10 - 1 : target_idx);
+        target = get_mouse_target(&graphics, &stacks, num_stacks);
         switch (event.type) {
             case SDL_QUIT:
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                move_stack(
-                        &stacks[target_idx],
-                        &mouse_stack,
-                        get_card_at_mouse_y(
-                            &graphics,
-                            &stacks[target_idx],
-                            &card_size));
+                move_stack(&stacks[target.stack], &mouse_stack, target.card);
                 break;
             case SDL_MOUSEBUTTONUP:
-                move_stack(
-                        &mouse_stack,
-                        &stacks[target_idx],
-                        0);
+                move_stack(&mouse_stack, &stacks[target.stack], 0);
                 break;
-
         }
 
-        SDL_GetMouseState(&(graphics.mouse_x), &(graphics.mouse_y));
+        update_graphics(&graphics, num_stacks);
         SDL_GetMouseState(&(mouse_stack.rect.x), &(mouse_stack.rect.y));
-        mouse_stack.rect.x -= card_size.w / 2;
-        mouse_stack.rect.y -= card_size.h / 4;
+        mouse_stack.rect.x -= graphics.card_w / 2;
+        mouse_stack.rect.y -= graphics.card_h / 4;
 
-        SDL_RenderClear(graphics.renderer);
-
-        SDL_GetWindowSize(graphics.window, &graphics.width, &graphics.height);
-        card_size.w = graphics.width / 10;
-        card_size.h = card_size.w * 7 / 5;
-
-
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < num_stacks; i++) {
             stacks[i].rect = make_rect(
-                    graphics.width / 10 * i + 3,
+                    graphics.width / num_stacks * i + 3,
                     3,
-                    graphics.width / 10 - 5,
+                    graphics.width / num_stacks - 5,
                     graphics.height - 5);
-            draw_stack(&graphics, &stacks[i], &card_size);
+            draw_stack(&graphics, &stacks[i]);
 
         }
 
-        draw_stack(&graphics, &mouse_stack, &card_size);
+        draw_stack(&graphics, &mouse_stack);
         SDL_RenderPresent(graphics.renderer);
     }
-
 
     /* Clean up */
     free(deck);

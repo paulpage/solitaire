@@ -123,28 +123,25 @@ void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect)
     }
 }
 
-int get_stack_offset(Stack *stack, CardSize *card_size)
+int get_stack_offset(Graphics *graphics, Stack *stack)
 {
-    int offset = card_size->h / 4;
-    if (card_size->h + (offset - 1) * stack->num_cards > stack->rect.h) {
-        offset = (stack->rect.h - card_size->h) / (stack->num_cards - 1);
+    int offset = graphics->card_h / 4;
+    if (graphics->card_h + (offset - 1) * stack->num_cards > stack->rect.h) {
+        offset = (stack->rect.h - graphics->card_h) / (stack->num_cards - 1);
     }
     return offset;
 }
 
-void draw_stack(
-        Graphics *graphics,
-        Stack *stack,
-        CardSize *card_size)
+void draw_stack(Graphics *graphics, Stack *stack)
 {
-    int offset = get_stack_offset(stack, card_size);
-    int margin = card_size->w / 16;
+    int offset = get_stack_offset(graphics, stack);
+    int margin = graphics->card_w / 16;
     for (int i = 0; i < stack->num_cards; i++) {
         SDL_Rect rect = make_rect(
                 stack->rect.x + margin,
                 stack->rect.y + (offset * i) + margin,
-                card_size->w - (2 * margin),
-                card_size->h - (2 * margin));
+                graphics->card_w - (2 * margin),
+                graphics->card_h - (2 * margin));
         draw_card(graphics, &stack->cards[i], &rect);
     }
 }
@@ -164,27 +161,55 @@ void move_stack(Stack *srcstack, Stack *dststack, int srcidx)
     assert(srcstack->num_cards == srcidx);
 }
 
-int get_card_at_mouse_y(
-        Graphics *graphics, 
-        Stack *stack,
-        CardSize *card_size)
+MouseTarget get_mouse_target(
+        Graphics *graphics,
+        Stack **stacks,
+        int num_stacks)
 {
+    /* Get the index of the stack that the mouse is over */
+    int stack_idx = graphics->mouse_x / graphics->card_w;
+
+    /* Bound the result between 0 and num_stacks */
+    stack_idx = (stack_idx < 0 ? 0 : stack_idx);
+    stack_idx = (stack_idx > num_stacks - 1
+            ? num_stacks - 1
+            : stack_idx);
+
+    Stack *stack = &(*stacks)[stack_idx];
 
     /* Mouse position relative to the stack */
     int mouse_rel_y = graphics->mouse_y - stack->rect.y;
 
     /* The gap between the tops of the cards in the stack */
-    int offset = get_stack_offset(stack, card_size);
+    int offset = get_stack_offset(graphics, stack);
 
     /* 
      * The mouse will either be on a card buried in the stack, on the last
      * card on the stack, or below the stack.
      */
+    int card_idx = -1;
     if (mouse_rel_y / offset <= stack->num_cards - 1) {
-        return mouse_rel_y / offset;
+        card_idx = mouse_rel_y / offset;
     } else if (mouse_rel_y <= offset * (stack->num_cards - 1)
-            + card_size->h) {
-        return stack->num_cards - 1;
+            + graphics->card_h) {
+        card_idx = stack->num_cards - 1;
     }
-    return -1;
+
+    MouseTarget result = {
+        .stack = stack_idx,
+        .card = card_idx,
+    };
+    return result;
+}
+
+void update_graphics(Graphics *graphics, int num_stacks)
+{
+        SDL_GetMouseState(&(graphics->mouse_x), &(graphics->mouse_y));
+        SDL_GetWindowSize(
+                graphics->window,
+                &(graphics->width),
+                &(graphics->height));
+        graphics->card_w = graphics->width / num_stacks;
+        graphics->card_h = graphics->card_w * 7 / 5;
+        SDL_RenderClear(graphics->renderer);
 }
