@@ -8,6 +8,31 @@
 
 #include "graphics.h"
 
+int can_pick_up(Stack *src, int idx) {
+    /* Don't allow moving facedown cards */
+    if (src->cards[idx].orientation == 0) {
+        return false;
+    }
+    Card *prev_card;
+    Card *curr_card;
+    for (int i = idx; i < src->num_cards - 1; i++) {
+        prev_card = &src->cards[i];
+        curr_card = &src->cards[i + 1];
+        if (curr_card->suit != prev_card->suit
+                || curr_card->rank != prev_card->rank - 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Whether or not a card stack can be set down */
+int can_place(Stack *src, Stack *dst) {
+    int src_val = src->cards[0].rank;
+    int dst_val = dst->cards[dst->num_cards - 1].rank;
+    return (src_val == dst_val - 1);
+}
+
 int main(int argc, char* argv[])
 {
     /* Seed the random number generator */
@@ -94,14 +119,22 @@ int main(int argc, char* argv[])
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
-                src_stack_idx = target.stack;
-                move_stack(&stacks[target.stack], &mouse_stack, target.card);
+                if (can_pick_up(&stacks[target.stack], target.card)) {
+                    src_stack_idx = target.stack;
+                    move_stack(&stacks[target.stack], &mouse_stack, target.card);
+                }
                 break;
             case SDL_MOUSEBUTTONUP:
                 dst_stack_idx = target.stack;
-                move_stack(&mouse_stack, &stacks[target.stack], 0);
+                if (can_place(&mouse_stack, &stacks[target.stack])) {
+                    move_stack(&mouse_stack, &stacks[target.stack], 0);
+                } else {
+                    move_stack(&mouse_stack, &stacks[src_stack_idx], 0);
+                }
                 if (dst_stack_idx != src_stack_idx) {
-                    stacks[src_stack_idx].cards[stacks[src_stack_idx].num_cards - 1].orientation = 1;
+                    stacks[src_stack_idx]
+                        .cards[stacks[src_stack_idx].num_cards - 1]
+                        .orientation = 1;
                 }
                 break;
         }
