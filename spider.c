@@ -8,7 +8,8 @@
 
 #include "graphics.h"
 
-int can_pick_up(Stack *src, int idx) {
+int can_pick_up(Stack *src, int idx)
+{
     /* Don't allow moving facedown cards */
     if (src->cards[idx].orientation == 0) {
         return false;
@@ -27,10 +28,19 @@ int can_pick_up(Stack *src, int idx) {
 }
 
 /* Whether or not a card stack can be set down */
-int can_place(Stack *src, Stack *dst) {
+int can_place(Stack *src, Stack *dst)
+{
     int src_val = src->cards[0].rank;
     int dst_val = dst->cards[dst->num_cards - 1].rank;
     return (src_val == dst_val - 1);
+}
+
+int is_over_extra_stacks(Graphics *graphics)
+{
+    int offset = grahics.card_w / 8;
+    int margin = graphics.card_w / 16;
+    
+
 }
 
 int main(int argc, char* argv[])
@@ -56,9 +66,17 @@ int main(int argc, char* argv[])
     bool quit = false;
     SDL_Event event;
 
+    // Number of stacks in the main play area
     int num_stacks = 10;
+    // Number of stacks to be dealt from during play
+    int num_extra_stacks = 5;
+    // Number of stacks to put completed series
+    int num_goal_stacks = 8;
+
     Card *deck = malloc(sizeof(Card) * 104);
     Stack *stacks = malloc(sizeof(Stack) * num_stacks);
+    Stack *extra_stacks = malloc(sizeof(Stack) * num_extra_stacks);
+    Stack *goal_stacks = malloc(sizeof(Stack) * num_goal_stacks);
 
     update_graphics(&graphics, num_stacks);
 
@@ -84,19 +102,37 @@ int main(int argc, char* argv[])
                 graphics.width / num_stacks,
                 graphics.height - graphics.card_h);
     }
+    // TODO: do this for other stacks
 
     /* Populate stacks */
 
     /* Facedown cards */
-    for (int i = 0; i < 34; i++) {
+    int i;
+    for (i = 0; i < 34; i++) {
         deck[i].orientation = 0;
         Stack *stack = &stacks[i % num_stacks];
         stack->cards[stack->num_cards] = deck[i];
         stack->num_cards++;
     }
     /* Faceup cards */
-    for (int i = 34; i < 44; i++) {
+    for (i = 34; i < 44; i++) {
         Stack *stack = &stacks[i % num_stacks];
+        stack->cards[stack->num_cards] = deck[i];
+        stack->num_cards++;
+    }
+    /* Extra stacks */
+    for (i = 45; i < 104; i++) {
+        Stack *stack = &extra_stacks[i % num_extra_stacks];
+        stack->num_cards = 0;
+        stack->cards[stack->num_cards] = deck[i];
+        stack->cards[stack->num_cards].orientation = 0; // facedown
+        stack->num_cards++;
+    }
+
+    /* goal stacks TODO: remove this (used for debugging) */
+    for (i = 0; i < num_goal_stacks; i++) {
+        Stack *stack = &goal_stacks[i % num_goal_stacks];
+        stack->num_cards = 0;
         stack->cards[stack->num_cards] = deck[i];
         stack->num_cards++;
     }
@@ -122,6 +158,8 @@ int main(int argc, char* argv[])
                 if (can_pick_up(&stacks[target.stack], target.card)) {
                     src_stack_idx = target.stack;
                     move_stack(&stacks[target.stack], &mouse_stack, target.card);
+                } else if (is_over_extra_stacks(&graphics)) {
+                    deal_next_set(&stacks, &extra_stacks);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
@@ -149,7 +187,28 @@ int main(int argc, char* argv[])
                     graphics.width / num_stacks,
                     graphics.height - graphics.card_h);
             draw_stack(&graphics, &stacks[i]);
+        }
 
+        for (int i = 0; i < num_extra_stacks; i++) {
+            int offset = graphics.card_w / 8;
+            int margin = graphics.card_w / 16;
+            extra_stacks[i].rect = make_rect(
+                    offset * i + margin,
+                    margin,
+                    graphics.width / num_stacks - (margin * 2),
+                    graphics.card_h - (margin * 2));
+            draw_card(&graphics, &extra_stacks[i].cards[0], &extra_stacks[i].rect);
+        }
+
+        for (int i = 0; i < num_goal_stacks; i++) {
+            int offset = graphics.card_w / 8;
+            int margin = graphics.card_w / 16;
+            extra_stacks[i].rect = make_rect(
+                    graphics.width - graphics.card_w - (offset * i),
+                    margin,
+                    graphics.width / num_stacks - (margin * 2),
+                    graphics.card_h - (margin * 2));
+            draw_card(&graphics, &extra_stacks[i].cards[0], &extra_stacks[i].rect);
         }
 
         draw_stack(&graphics, &mouse_stack);
@@ -159,6 +218,8 @@ int main(int argc, char* argv[])
     /* Clean up */
     free(deck);
     free(stacks);
+    free(extra_stacks);
+    free(goal_stacks);
     graphics_free(&graphics);
     IMG_Quit();
     SDL_Quit();

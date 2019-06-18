@@ -64,7 +64,6 @@ int graphics_init(Graphics *graphics, char *name);
 void graphics_free(Graphics *graphics);
 SDL_Rect make_rect(int x, int y, int w, int h);
 void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect);
-void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect);
 void draw_stack(Graphics *graphics, Stack *stack);
 void move_stack(Stack *srcstack, Stack *dststack, int srcidx);
 MouseTarget get_mouse_target(
