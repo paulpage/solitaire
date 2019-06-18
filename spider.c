@@ -32,15 +32,41 @@ int can_place(Stack *src, Stack *dst)
 {
     int src_val = src->cards[0].rank;
     int dst_val = dst->cards[dst->num_cards - 1].rank;
-    return (src_val == dst_val - 1);
+    return (src_val == dst_val - 1 || dst->num_cards == 0);
 }
 
-int is_over_extra_stacks(Graphics *graphics)
+bool is_over_extra_stacks(Graphics *graphics, int num_extra_stacks)
 {
-    int offset = grahics.card_w / 8;
-    int margin = graphics.card_w / 16;
-    
+    int offset = graphics->card_w / 8;
+    int margin = graphics->card_w / 16;
 
+    int x1 = margin;
+    int x2 = margin + graphics->card_w + (offset * num_extra_stacks);
+    int y1 = margin;
+    int y2 = margin + graphics->card_h;
+
+    int x = graphics->mouse_x;
+    int y = graphics->mouse_y;
+    return (x >= x1 && x <= x2 && y >= y1 && y <= y2);
+}
+
+/*
+ * Deals the next set of cards and returns the remaining number of stacks to be dealt.
+ */
+int deal_next_set(Stack **stacks, Stack **extra_stacks, int num_stacks, int num_extra_stacks)
+{
+    if (num_extra_stacks > 0) {
+        int i = 0;
+        Stack *xs = extra_stacks[num_extra_stacks - 1];
+        while (xs->num_cards > 0) {
+            Stack *s = stacks[i % num_stacks];
+            s->cards[s->num_cards] = xs->cards[xs->num_cards - 1];
+            s->num_cards++;
+            xs->num_cards--;
+            i++;
+        }
+    }
+    return num_extra_stacks - 1;
 }
 
 int main(int argc, char* argv[])
@@ -75,6 +101,7 @@ int main(int argc, char* argv[])
 
     Card *deck = malloc(sizeof(Card) * 104);
     Stack *stacks = malloc(sizeof(Stack) * num_stacks);
+    // TODO rename "extra"
     Stack *extra_stacks = malloc(sizeof(Stack) * num_extra_stacks);
     Stack *goal_stacks = malloc(sizeof(Stack) * num_goal_stacks);
 
@@ -158,8 +185,8 @@ int main(int argc, char* argv[])
                 if (can_pick_up(&stacks[target.stack], target.card)) {
                     src_stack_idx = target.stack;
                     move_stack(&stacks[target.stack], &mouse_stack, target.card);
-                } else if (is_over_extra_stacks(&graphics)) {
-                    deal_next_set(&stacks, &extra_stacks);
+                } else if (is_over_extra_stacks(&graphics, num_extra_stacks)) {
+                    num_extra_stacks = deal_next_set(&stacks, &extra_stacks, num_stacks, num_extra_stacks);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
