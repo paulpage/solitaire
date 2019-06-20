@@ -68,7 +68,7 @@ void draw_stack(Graphics *graphics, Stack *stack);
 void move_stack(Stack *srcstack, Stack *dststack, int srcidx);
 MouseTarget get_mouse_target(
         Graphics *graphics,
-        Stack **stacks,
+        Stack stacks[],
         int num_stacks);
 void update_graphics(Graphics *graphics, int num_stacks);
 void update_mouse_stack(Graphics *graphics, Stack *mouse_stacks);

@@ -53,14 +53,15 @@ bool is_over_extra_stacks(Graphics *graphics, int num_extra_stacks)
 /*
  * Deals the next set of cards and returns the remaining number of stacks to be dealt.
  */
-int deal_next_set(Stack **stacks, Stack **extra_stacks, int num_stacks, int num_extra_stacks)
+int deal_next_set(Stack stacks[], Stack extra_stacks[], int num_stacks, int num_extra_stacks)
 {
     if (num_extra_stacks > 0) {
         int i = 0;
-        Stack *xs = extra_stacks[num_extra_stacks - 1];
+        Stack *xs = &extra_stacks[num_extra_stacks - 1];
         while (xs->num_cards > 0) {
-            Stack *s = stacks[i % num_stacks];
+            Stack *s = &stacks[i % num_stacks];
             s->cards[s->num_cards] = xs->cards[xs->num_cards - 1];
+            s->cards[s->num_cards].orientation = 1;
             s->num_cards++;
             xs->num_cards--;
             i++;
@@ -99,11 +100,11 @@ int main(int argc, char* argv[])
     // Number of stacks to put completed series
     int num_goal_stacks = 8;
 
-    Card *deck = malloc(sizeof(Card) * 104);
-    Stack *stacks = malloc(sizeof(Stack) * num_stacks);
+    Card deck[104];
+    Stack stacks[num_stacks];
     // TODO rename "extra"
-    Stack *extra_stacks = malloc(sizeof(Stack) * num_extra_stacks);
-    Stack *goal_stacks = malloc(sizeof(Stack) * num_goal_stacks);
+    Stack extra_stacks[num_extra_stacks];
+    Stack goal_stacks[num_goal_stacks];
 
     update_graphics(&graphics, num_stacks);
 
@@ -129,6 +130,9 @@ int main(int argc, char* argv[])
                 graphics.width / num_stacks,
                 graphics.height - graphics.card_h);
     }
+    for (int i = 0; i < num_extra_stacks; i++) {
+        extra_stacks[i].num_cards = 0;
+    }
     // TODO: do this for other stacks
 
     /* Populate stacks */
@@ -150,10 +154,9 @@ int main(int argc, char* argv[])
     /* Extra stacks */
     for (i = 45; i < 104; i++) {
         Stack *stack = &extra_stacks[i % num_extra_stacks];
-        stack->num_cards = 0;
         stack->cards[stack->num_cards] = deck[i];
-        stack->cards[stack->num_cards].orientation = 0; // facedown
-        stack->num_cards++;
+        stack->cards[stack->num_cards].orientation = 0;
+        stack->num_cards = stack->num_cards + 1;
     }
 
     /* goal stacks TODO: remove this (used for debugging) */
@@ -176,7 +179,7 @@ int main(int argc, char* argv[])
     while (!quit) {
         SDL_WaitEvent(&event);
 
-        target = get_mouse_target(&graphics, &stacks, num_stacks);
+        target = get_mouse_target(&graphics, stacks, num_stacks);
         switch (event.type) {
             case SDL_QUIT:
                 quit = true;
@@ -186,7 +189,7 @@ int main(int argc, char* argv[])
                     src_stack_idx = target.stack;
                     move_stack(&stacks[target.stack], &mouse_stack, target.card);
                 } else if (is_over_extra_stacks(&graphics, num_extra_stacks)) {
-                    num_extra_stacks = deal_next_set(&stacks, &extra_stacks, num_stacks, num_extra_stacks);
+                    num_extra_stacks = deal_next_set(stacks, extra_stacks, num_stacks, num_extra_stacks);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
@@ -230,12 +233,12 @@ int main(int argc, char* argv[])
         for (int i = 0; i < num_goal_stacks; i++) {
             int offset = graphics.card_w / 8;
             int margin = graphics.card_w / 16;
-            extra_stacks[i].rect = make_rect(
+            goal_stacks[i].rect = make_rect(
                     graphics.width - graphics.card_w - (offset * i),
                     margin,
                     graphics.width / num_stacks - (margin * 2),
                     graphics.card_h - (margin * 2));
-            draw_card(&graphics, &extra_stacks[i].cards[0], &extra_stacks[i].rect);
+            draw_card(&graphics, &goal_stacks[i].cards[0], &goal_stacks[i].rect);
         }
 
         draw_stack(&graphics, &mouse_stack);
@@ -243,10 +246,6 @@ int main(int argc, char* argv[])
     }
 
     /* Clean up */
-    free(deck);
-    free(stacks);
-    free(extra_stacks);
-    free(goal_stacks);
     graphics_free(&graphics);
     IMG_Quit();
     SDL_Quit();

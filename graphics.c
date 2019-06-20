@@ -167,7 +167,7 @@ void move_stack(Stack *srcstack, Stack *dststack, int srcidx)
 
 MouseTarget get_mouse_target(
         Graphics *graphics,
-        Stack **stacks,
+        Stack stacks[],
         int num_stacks)
 {
     /* Get the index of the stack that the mouse is over */
@@ -179,24 +179,24 @@ MouseTarget get_mouse_target(
             ? num_stacks - 1
             : stack_idx);
 
-    Stack *stack = &(*stacks)[stack_idx];
+    Stack stack = stacks[stack_idx];
 
     /* Mouse position relative to the stack */
-    int mouse_rel_y = graphics->mouse_y - stack->rect.y;
+    int mouse_rel_y = graphics->mouse_y - stack.rect.y;
 
     /* The gap between the tops of the cards in the stack */
-    int offset = get_stack_offset(graphics, stack);
+    int offset = get_stack_offset(graphics, &stack);
 
     /* 
      * The mouse will either be on a card buried in the stack, on the last
      * card on the stack, or below the stack.
      */
     int card_idx = -1;
-    if (mouse_rel_y / offset <= stack->num_cards - 1) {
+    if (mouse_rel_y / offset <= stack.num_cards - 1) {
         card_idx = mouse_rel_y / offset;
-    } else if (mouse_rel_y <= offset * (stack->num_cards - 1)
+    } else if (mouse_rel_y <= offset * (stack.num_cards - 1)
             + graphics->card_h) {
-        card_idx = stack->num_cards - 1;
+        card_idx = stack.num_cards - 1;
     }
 
     MouseTarget result = {

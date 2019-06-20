@@ -2,7 +2,7 @@
 
 #include "cards.h"
 
-void shuffle(Card *deck, size_t num_cards)
+void shuffle(Card deck[], size_t num_cards)
 {
     if (num_cards > 1) {
         size_t i;
