@@ -93,10 +93,12 @@ int check_complete(Pile *srcpile, Pile *dstpile)
             // We found a king
             int j = i + 1;
             int target_rank = 11;
+            int target_suit = srcpile->cards[i].suit;
             // Crawl down the pile to see if it's complete and in
             // descending order
             while (j < srcpile->num_cards) {
-                if (srcpile->cards[j].rank != target_rank) {
+                if (srcpile->cards[j].rank != target_rank
+                        || srcpile->cards[j].suit  != target_suit) {
                     break;
                 }
                 if (target_rank == 0) {
@@ -161,7 +163,7 @@ int main(int argc, char* argv[])
             deck[52 + suit * 13 + rank] = card;
         }
     }
-    /* shuffle(deck, 104); */
+    shuffle(deck, 104);
 
     // Create piles
     for (int i = 0; i < num_piles; i++) {
@@ -196,7 +198,7 @@ int main(int argc, char* argv[])
         pile->num_cards++;
     }
     // deal piles
-    for (i = 45; i < 104; i++) {
+    for (i = 44; i < 104; i++) {
         Pile *pile = &deal_piles[i % num_deal_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->cards[pile->num_cards].orientation = 0;
@@ -276,16 +278,18 @@ int main(int argc, char* argv[])
             draw_card(&graphics, &deal_piles[i].cards[0], &deal_piles[i].rect);
         }
 
-        /* for (int i = 0; i < num_goal_piles; i++) { */
-        /*     int offset = graphics.card_w / 8; */
-        /*     int margin = graphics.card_w / 16; */
-        /*     goal_piles[i].rect = make_rect( */
-        /*             graphics.width - graphics.card_w - (offset * i), */
-        /*             margin, */
-        /*             graphics.width / num_piles - (margin * 2), */
-        /*             graphics.card_h - (margin * 2)); */
-        /*     draw_card(&graphics, &goal_piles[i].cards[0], &goal_piles[i].rect); */
-        /* } */
+        for (int i = 0; i < num_goal_piles; i++) {
+            if (goal_piles[i].num_cards > 0) {
+                int offset = graphics.card_w / 8;
+                int margin = graphics.card_w / 16;
+                goal_piles[i].rect = make_rect(
+                        graphics.width - graphics.card_w - (offset * i),
+                        margin,
+                        graphics.width / num_piles - (margin * 2),
+                        graphics.card_h - (margin * 2));
+                draw_card(&graphics, &goal_piles[i].cards[0], &goal_piles[i].rect);
+            }
+        }
 
         draw_pile(&graphics, &mouse_pile);
         SDL_RenderPresent(graphics.renderer);
