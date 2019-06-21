@@ -59,6 +59,8 @@ bool is_over_deal_piles(Graphics *graphics, int num_deal_piles)
 /*
  * Deals the next set of cards and returns the remaining number of piles to
  * be dealt.
+int check_
+
  */
 int deal_next_set(
         Pile piles[],
@@ -79,6 +81,36 @@ int deal_next_set(
         }
     }
     return num_deal_piles - 1;
+}
+
+/*
+ * Checks if the source pile contains a full series from king to ace of one 
+ * suit. If so, it moves the series to the destination pile, and returns
+ * true. Otherwise it returns false.
+ */
+int check_complete(Pile *srcpile, Pile *dstpile)
+{
+    for (int i = 0; i < srcpile->num_cards; i++) {
+        if (srcpile->cards[i].rank == 12) {
+            // We found a king
+            int j = i + 1;
+            int target_rank = 11;
+            // Crawl down the pile to see if it's complete and in
+            // descending order
+            while (j < srcpile->num_cards) {
+                if (srcpile->cards[j].rank != target_rank) {
+                    break;
+                }
+                if (target_rank == 1) {
+                    // We made it to the ace
+                    return true;
+                }
+                target_rank--;
+                j++;
+            }
+        }
+    }
+    return false;
 }
 
 int main(int argc, char* argv[])
@@ -104,12 +136,10 @@ int main(int argc, char* argv[])
     bool quit = false;
     SDL_Event event;
 
-    // Number of piles in the main play area
-    int num_piles = 10;
-    // Number of piles to be dealt from during play
-    int num_deal_piles = 5;
-    // Number of piles to put completed series
-    int num_goal_piles = 8;
+    int num_piles = 10; // Number of piles in the main play area
+    int num_deal_piles = 5; // Number of piles to be dealt from during play
+    int num_goal_piles = 8; // Number of piles to put completed series
+    int num_completed_piles = 0; // Number of piles series that have been completed
 
     Card deck[104];
     Pile piles[num_piles];
@@ -129,7 +159,7 @@ int main(int argc, char* argv[])
             deck[52 + suit * 13 + rank] = card;
         }
     }
-    shuffle(deck, 104);
+    /* shuffle(deck, 104); */
 
     // Create piles
     for (int i = 0; i < num_piles; i++) {
@@ -204,6 +234,12 @@ int main(int argc, char* argv[])
                 dst_pile_idx = target.pile;
                 if (can_place(&mouse_pile, &piles[target.pile])) {
                     move_pile(&mouse_pile, &piles[target.pile], 0);
+                    if (check_complete(&piles[target.pile], &goal_piles[num_completed_piles])) {
+                        num_completed_piles++;
+                        if (num_completed_piles == 8) {
+                            printf("WIN!!!!");
+                        }
+                    }
                 } else {
                     move_pile(&mouse_pile, &piles[src_pile_idx], 0);
                 }
@@ -238,16 +274,16 @@ int main(int argc, char* argv[])
             draw_card(&graphics, &deal_piles[i].cards[0], &deal_piles[i].rect);
         }
 
-        for (int i = 0; i < num_goal_piles; i++) {
-            int offset = graphics.card_w / 8;
-            int margin = graphics.card_w / 16;
-            goal_piles[i].rect = make_rect(
-                    graphics.width - graphics.card_w - (offset * i),
-                    margin,
-                    graphics.width / num_piles - (margin * 2),
-                    graphics.card_h - (margin * 2));
-            draw_card(&graphics, &goal_piles[i].cards[0], &goal_piles[i].rect);
-        }
+        /* for (int i = 0; i < num_goal_piles; i++) { */
+        /*     int offset = graphics.card_w / 8; */
+        /*     int margin = graphics.card_w / 16; */
+        /*     goal_piles[i].rect = make_rect( */
+        /*             graphics.width - graphics.card_w - (offset * i), */
+        /*             margin, */
+        /*             graphics.width / num_piles - (margin * 2), */
+        /*             graphics.card_h - (margin * 2)); */
+        /*     draw_card(&graphics, &goal_piles[i].cards[0], &goal_piles[i].rect); */
+        /* } */
 
         draw_pile(&graphics, &mouse_pile);
         SDL_RenderPresent(graphics.renderer);
