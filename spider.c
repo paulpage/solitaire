@@ -59,8 +59,6 @@ bool is_over_deal_piles(Graphics *graphics, int num_deal_piles)
 /*
  * Deals the next set of cards and returns the remaining number of piles to
  * be dealt.
-int check_
-
  */
 int deal_next_set(
         Pile piles[],
@@ -101,8 +99,12 @@ int check_complete(Pile *srcpile, Pile *dstpile)
                 if (srcpile->cards[j].rank != target_rank) {
                     break;
                 }
-                if (target_rank == 1) {
+                if (target_rank == 0) {
                     // We made it to the ace
+                    move_pile(srcpile, dstpile, i);
+                    if (srcpile->num_cards > 0) {
+                        srcpile->cards[i - 1].orientation = 1; // faceup
+                    }
                     return true;
                 }
                 target_rank--;
