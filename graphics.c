@@ -123,27 +123,30 @@ void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect)
     }
 }
 
-int get_pile_offset(Graphics *graphics, Pile *pile)
-{
-    int offset = graphics->card_h / 4;
-    if (graphics->card_h + (offset - 1) * pile->num_cards > pile->rect.h) {
-        offset = (pile->rect.h - graphics->card_h) / (pile->num_cards - 1);
+int get_card_y(Graphics *graphics, Pile *pile, int card_idx) {
+    int margin = graphics->card_h / 16;
+    int facedown_offset = graphics->card_h / 16; // Facedown cards
+    int faceup_offset = graphics->card_h / 4;
+    if (graphics->card_h + (faceup_offset - 1) * pile->num_cards > pile->rect.h) {
+        faceup_offset = (pile->rect.h - graphics->card_h) / (pile->num_cards - 1);
+        facedown_offset = faceup_offset;
     }
-    /*
-     * Don't return 0 offset because future calculations will
-     * divide by the offset
-     */
-    return offset > 0 ? offset : 1;
+    int i = 0;
+    for (; i < pile->num_cards && pile->cards[i].orientation == 0; i++) {
+        if (i == card_idx) {
+            return margin + i * facedown_offset;
+        }
+    }
+    return margin + i * facedown_offset + (card_idx - i) * faceup_offset;
 }
 
 void draw_pile(Graphics *graphics, Pile *pile)
 {
-    int offset = get_pile_offset(graphics, pile);
-    int margin = graphics->card_w / 16;
+    int margin = graphics->card_h / 16;
     for (int i = 0; i < pile->num_cards; i++) {
         SDL_Rect rect = make_rect(
                 pile->rect.x + margin,
-                pile->rect.y + (offset * i) + margin,
+                pile->rect.y + get_card_y(graphics, pile, i),
                 graphics->card_w - (2 * margin),
                 graphics->card_h - (2 * margin));
         draw_card(graphics, &pile->cards[i], &rect);
@@ -184,25 +187,15 @@ MouseTarget get_mouse_target(
     /* Mouse position relative to the pile */
     int mouse_rel_y = graphics->mouse_y - pile.rect.y;
 
-    /* The gap between the tops of the cards in the pile */
-    int offset = get_pile_offset(graphics, &pile);
-
-    /* 
-     * The mouse will either be on a card buried in the pile, on the last
-     * card on the pile, or below the pile.
-     */
-    int card_idx = -1;
-    if (mouse_rel_y / offset <= pile.num_cards - 1) {
-        card_idx = mouse_rel_y / offset;
-    } else if (mouse_rel_y <= offset * (pile.num_cards - 1)
-            + graphics->card_h) {
-        card_idx = pile.num_cards - 1;
+    /* MouseTarget result; */
+    for (int i = pile.num_cards - 1; i >= 0; i--) {
+        int card_y = get_card_y(graphics, &pile, i);
+        if (mouse_rel_y > card_y && mouse_rel_y < card_y + graphics->card_h) {
+            MouseTarget result = {.pile = pile_idx, .card = i};
+            return result;
+        }
     }
-
-    MouseTarget result = {
-        .pile = pile_idx,
-        .card = card_idx,
-    };
+    MouseTarget result = {.pile = pile_idx, .card = -1};
     return result;
 }
 
