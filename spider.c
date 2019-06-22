@@ -66,16 +66,22 @@ int deal_next_set(
         int num_piles,
         int num_deal_piles)
 {
+    // Don't deal if there are empty spaces
+    int i = 0;
+    for (; i < num_piles; i++) {
+        if (piles[i].num_cards == 0) {
+            return num_deal_piles;
+        }
+    }
     if (num_deal_piles > 0) {
-        int i = 0;
+        i = 0;
         Pile *xs = &deal_piles[num_deal_piles - 1];
-        while (xs->num_cards > 0) {
+        for (; xs->num_cards > 0; i++) {
             Pile *s = &piles[i % num_piles];
             s->cards[s->num_cards] = xs->cards[xs->num_cards - 1];
             s->cards[s->num_cards].orientation = 1;
             s->num_cards++;
             xs->num_cards--;
-            i++;
         }
     }
     return num_deal_piles - 1;
