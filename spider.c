@@ -127,6 +127,8 @@ int main(int argc, char* argv[])
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
         return 1;
     }
+    SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
+
     // Initialize SDL Image library
     IMG_Init(IMG_INIT_PNG);
 
