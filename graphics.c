@@ -123,21 +123,46 @@ void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect)
     }
 }
 
+/*
+ * Get the index of the last facedown card in the pile.
+ */
+int get_facedown_idx(Pile *pile)
+{
+    int i = 0;
+    for (; i < pile->num_cards && pile->cards[i].orientation == 0; i++) {
+        // Do nothing
+    }
+    return i;
+}
+
 int get_card_y(Graphics *graphics, Pile *pile, int card_idx) {
     int margin = graphics->card_h / 16;
     int facedown_offset = graphics->card_h / 16; // Facedown cards
     int faceup_offset = graphics->card_h / 4;
-    if (graphics->card_h + (faceup_offset - 1) * pile->num_cards > pile->rect.h) {
-        faceup_offset = (pile->rect.h - graphics->card_h) / (pile->num_cards - 1);
-        facedown_offset = faceup_offset;
+
+    // Where is the divide between facedown and faceup cards?
+    int facedown_idx = get_facedown_idx(pile);
+
+    // How much vertical space will this take up? 
+    int y = facedown_offset * facedown_idx +
+        faceup_offset * (pile->num_cards - facedown_idx - 1) +
+        graphics->card_h;
+
+    int base = facedown_idx * facedown_offset;
+
+    // If it's going to take up too much space, set the offsets lower to
+    // compress the pile
+    if (y > pile->rect.h) {
+        int divisor = (pile->num_cards - facedown_idx - 1);
+        divisor = divisor <= 0 ? 1 : divisor;
+        faceup_offset = (pile->rect.h - base - graphics->card_h) / divisor;
     }
-    int i = 0;
-    for (; i < pile->num_cards && pile->cards[i].orientation == 0; i++) {
-        if (i == card_idx) {
-            return margin + i * facedown_offset;
-        }
+
+    if (card_idx < facedown_idx) {
+        return margin + card_idx * facedown_offset;
     }
-    return margin + i * facedown_offset + (card_idx - i) * faceup_offset;
+    return margin + facedown_idx * facedown_offset +
+        (card_idx - facedown_idx) * faceup_offset;
 }
 
 void draw_pile(Graphics *graphics, Pile *pile)
