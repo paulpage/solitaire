@@ -174,7 +174,8 @@ int main(int argc, char* argv[])
     shuffle(deck, 104);
 
     // Create piles
-    for (int i = 0; i < num_piles; i++) {
+    int i;
+    for (i = 0; i < num_piles; i++) {
         piles[i].num_cards = 0;
         piles[i].rect = make_rect(
                 graphics.width / num_piles * i,
@@ -182,17 +183,17 @@ int main(int argc, char* argv[])
                 graphics.width / num_piles,
                 graphics.height - graphics.card_h);
     }
-    for (int i = 0; i < num_deal_piles; i++) {
+    for (i = 0; i < num_deal_piles; i++) {
         deal_piles[i].num_cards = 0;
     }
-    for (int i = 0; i < num_goal_piles; i++) {
+    for (i = 0; i < num_goal_piles; i++) {
         goal_piles[i].num_cards = 0;
     }
 
     // Populate piles
 
     // Facedown cards
-    int i = 0;
+    i = 0;
     for (; i < 44; i++) {
         deck[i].orientation = 0;
         Pile *pile = &piles[i % num_piles];
@@ -266,7 +267,10 @@ int main(int argc, char* argv[])
         update_graphics(&graphics, num_piles);
         update_mouse_pile(&graphics, &mouse_pile);
 
-        for (int i = 0; i < num_piles; i++) {
+        int offset = graphics.card_w / 8;
+        int margin = graphics.card_w / 16;
+
+        for (i = 0; i < num_piles; i++) {
             piles[i].rect = make_rect(
                     graphics.width / num_piles * i,
                     graphics.card_h,
@@ -275,9 +279,7 @@ int main(int argc, char* argv[])
             draw_pile(&graphics, &piles[i]);
         }
 
-        for (int i = 0; i < num_deal_piles; i++) {
-            int offset = graphics.card_w / 8;
-            int margin = graphics.card_w / 16;
+        for (i = 0; i < num_deal_piles; i++) {
             deal_piles[i].rect = make_rect(
                     offset * i + margin,
                     margin,
@@ -286,10 +288,8 @@ int main(int argc, char* argv[])
             draw_card(&graphics, &deal_piles[i].cards[0], &deal_piles[i].rect);
         }
 
-        for (int i = 0; i < num_goal_piles; i++) {
+        for (i = 0; i < num_goal_piles; i++) {
             if (goal_piles[i].num_cards > 0) {
-                int offset = graphics.card_w / 8;
-                int margin = graphics.card_w / 16;
                 goal_piles[i].rect = make_rect(
                         graphics.width - graphics.card_w - (offset * i),
                         margin,
