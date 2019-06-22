@@ -6,14 +6,16 @@
 
 #include "graphics.h"
 
-SDL_Texture * load_texture(SDL_Renderer *renderer, char *filename)
+SDL_Texture * load_texture(Graphics *graphics, char *filename)
 {
     SDL_Surface *surface = IMG_Load(filename);
     if (surface == NULL) {
         printf("Failed to load image %s. SDL Error: %s\n",
                 filename, SDL_GetError());
     }
-    SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_Texture *texture = SDL_CreateTextureFromSurface(
+            graphics->renderer,
+            surface);
     SDL_FreeSurface(surface);
     return texture;
 }
@@ -35,10 +37,10 @@ int graphics_init(Graphics *graphics, char *name)
     graphics->renderer = SDL_CreateRenderer(graphics->window, -1, 0);
 
     graphics->textures = malloc(sizeof(CardTextures));
-    graphics->textures->back  = load_texture(graphics->renderer, "card_back.png");
-    graphics->textures->front = load_texture(graphics->renderer, "card_front.png");
-    graphics->textures->suits = load_texture(graphics->renderer, "suits.png");
-    graphics->textures->text  = load_texture(graphics->renderer, "text.png");
+    graphics->textures->back  = load_texture(graphics, "card_back.png");
+    graphics->textures->front = load_texture(graphics, "card_front.png");
+    graphics->textures->suits = load_texture(graphics, "suits.png");
+    graphics->textures->text  = load_texture(graphics, "text.png");
 
     graphics->width = 800;
     graphics->height = 600;

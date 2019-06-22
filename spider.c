@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
     int num_piles = 10; // Number of piles in the main play area
     int num_deal_piles = 5; // Number of piles to be dealt from during play
     int num_goal_piles = 8; // Number of piles to put completed series
-    int num_completed_piles = 0; // Number of piles series that have been completed
+    int num_completed_piles = 0; // Number of series completed
 
     Card deck[104];
     Pile piles[num_piles];
@@ -249,7 +249,8 @@ int main(int argc, char* argv[])
                 dst_pile_idx = target.pile;
                 if (can_place(&mouse_pile, &piles[target.pile])) {
                     move_pile(&mouse_pile, &piles[target.pile], 0);
-                    if (check_complete(&piles[target.pile], &goal_piles[num_completed_piles])) {
+                    if (check_complete(&piles[target.pile],
+                                &goal_piles[num_completed_piles])) {
                         num_completed_piles++;
                         if (num_completed_piles == 8) {
                             printf("WIN!!!!");
@@ -297,7 +298,10 @@ int main(int argc, char* argv[])
                         margin,
                         graphics.width / num_piles - (margin * 2),
                         graphics.card_h - (margin * 2));
-                draw_card(&graphics, &goal_piles[i].cards[0], &goal_piles[i].rect);
+                draw_card(
+                        &graphics,
+                        &goal_piles[i].cards[0],
+                        &goal_piles[i].rect);
             }
         }
 
