@@ -30,7 +30,9 @@ int can_pick_up(Pile *src, int idx)
     return true;
 }
 
-/* Whether or not a card pile can be set down */
+/*
+ * Whether or not a card pile can be set down
+ */
 int can_place(Pile *src, Pile *dst)
 {
     int src_val = src->cards[0].rank;
