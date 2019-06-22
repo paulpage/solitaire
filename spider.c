@@ -184,21 +184,21 @@ int main(int argc, char* argv[])
     // Populate piles
 
     // Facedown cards
-    int i;
-    for (i = 0; i < 34; i++) {
+    int i = 0;
+    for (; i < 44; i++) {
         deck[i].orientation = 0;
         Pile *pile = &piles[i % num_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->num_cards++;
     }
     // Faceup cards
-    for (i = 34; i < 44; i++) {
+    for (; i < 54; i++) {
         Pile *pile = &piles[i % num_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->num_cards++;
     }
     // deal piles
-    for (i = 44; i < 104; i++) {
+    for (; i < 104; i++) {
         Pile *pile = &deal_piles[i % num_deal_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->cards[pile->num_cards].orientation = 0;
