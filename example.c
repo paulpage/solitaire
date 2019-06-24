@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     Card *deck = malloc(sizeof(Card) * 104);
     Stack *stacks = malloc(sizeof(Stack) * num_stacks);
 
-    // Create a deck from two standard 52-card decks of cards.
+    /* Create a deck from two standard 52-card decks of cards. */
     for (int suit = 0; suit < 4; suit++) {
         for (int rank = 0; rank < 13; rank++) {
             Card card;

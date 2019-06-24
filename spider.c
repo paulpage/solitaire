@@ -13,8 +13,8 @@
  */
 int can_pick_up(Pile *src, int idx)
 {
-    // Don't allow moving facedown cards
-    if (src->cards[idx].orientation == 0) {
+    /* Don't allow moving facedown cards */
+    if (src->cards[idx].orientation == FACEDOWN) {
         return false;
     }
     Card *prev_card;
@@ -68,7 +68,7 @@ int deal_next_set(
         int num_piles,
         int num_deal_piles)
 {
-    // Don't deal if there are empty spaces
+    /* Don't deal if there are empty spaces */
     int i = 0;
     for (; i < num_piles; i++) {
         if (piles[i].num_cards == 0) {
@@ -81,7 +81,7 @@ int deal_next_set(
         for (; xs->num_cards > 0; i++) {
             Pile *s = &piles[i % num_piles];
             s->cards[s->num_cards] = xs->cards[xs->num_cards - 1];
-            s->cards[s->num_cards].orientation = 1;
+            s->cards[s->num_cards].orientation = FACEUP;
             s->num_cards++;
             xs->num_cards--;
         }
@@ -98,22 +98,24 @@ int check_complete(Pile *srcpile, Pile *dstpile)
 {
     for (int i = 0; i < srcpile->num_cards; i++) {
         if (srcpile->cards[i].rank == 12) {
-            // We found a king
+            /* We found a king */
             int j = i + 1;
             int target_rank = 11;
             int target_suit = srcpile->cards[i].suit;
-            // Crawl down the pile to see if it's complete and in
-            // descending order
+            /*
+             * Crawl down the pile to see if it's complete and in
+             * descending order
+             */
             while (j < srcpile->num_cards) {
                 if (srcpile->cards[j].rank != target_rank
                         || srcpile->cards[j].suit  != target_suit) {
                     break;
                 }
                 if (target_rank == 0) {
-                    // We made it to the ace
+                    /* We made it to the ace */
                     move_pile(srcpile, dstpile, i);
                     if (srcpile->num_cards > 0) {
-                        srcpile->cards[i - 1].orientation = 1; // faceup
+                        srcpile->cards[i - 1].orientation = FACEUP;
                     }
                     return true;
                 }
@@ -127,17 +129,17 @@ int check_complete(Pile *srcpile, Pile *dstpile)
 
 int main(int argc, char* argv[])
 {
-    // Seed the random number generator
+    /* Seed the random number generator */
     srand(time(NULL));
 
-    // Initialize SDL
+    /* Initialize SDL */
     if (SDL_Init(SDL_INIT_VIDEO != 0)) {
         SDL_Log("Failed to initialize SDL: %s", SDL_GetError());
         return 1;
     }
     SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "1" );
 
-    // Initialize SDL Image library
+    /* Initialize SDL Image library */
     IMG_Init(IMG_INIT_PNG);
 
     Graphics graphics;
@@ -150,10 +152,10 @@ int main(int argc, char* argv[])
     bool quit = false;
     SDL_Event event;
 
-    int num_piles = 10; // Number of piles in the main play area
-    int num_deal_piles = 5; // Number of piles to be dealt from during play
-    int num_goal_piles = 8; // Number of piles to put completed series
-    int num_completed_piles = 0; // Number of series completed
+    int num_piles = 10; /* Number of piles in the main play area */
+    int num_deal_piles = 5; /* Number of piles to be dealt from during play */
+    int num_goal_piles = 8; /* Number of piles to put completed series */
+    int num_completed_piles = 0; /* Number of series completed */
 
     Card deck[104];
     Pile piles[num_piles];
@@ -162,20 +164,20 @@ int main(int argc, char* argv[])
 
     update_graphics(&graphics, num_piles);
 
-    // Create a deck from two standard 52-card decks of cards.
+    /* Create a deck from two standard 52-card decks of cards. */
     for (int suit = 0; suit < 4; suit++) {
         for (int rank = 0; rank < 13; rank++) {
             Card card;
             card.suit = suit;
             card.rank = rank;
-            card.orientation = 1;
+            card.orientation = FACEUP;
             deck[suit * 13 + rank] = card;
             deck[52 + suit * 13 + rank] = card;
         }
     }
     shuffle(deck, 104);
 
-    // Create piles
+    /* Create piles */
     int i;
     for (i = 0; i < num_piles; i++) {
         piles[i].num_cards = 0;
@@ -192,27 +194,27 @@ int main(int argc, char* argv[])
         goal_piles[i].num_cards = 0;
     }
 
-    // Populate piles
+    /* Populate piles */
 
-    // Facedown cards
+    /* Facedown cards */
     i = 0;
     for (; i < 44; i++) {
-        deck[i].orientation = 0;
+        deck[i].orientation = FACEDOWN;
         Pile *pile = &piles[i % num_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->num_cards++;
     }
-    // Faceup cards
+    /* Faceup cards */
     for (; i < 54; i++) {
         Pile *pile = &piles[i % num_piles];
         pile->cards[pile->num_cards] = deck[i];
         pile->num_cards++;
     }
-    // deal piles
+    /* deal piles */
     for (; i < 104; i++) {
         Pile *pile = &deal_piles[i % num_deal_piles];
         pile->cards[pile->num_cards] = deck[i];
-        pile->cards[pile->num_cards].orientation = 0;
+        pile->cards[pile->num_cards].orientation = FACEDOWN;
         pile->num_cards = pile->num_cards + 1;
     }
 
@@ -262,7 +264,7 @@ int main(int argc, char* argv[])
                 if (dst_pile_idx != src_pile_idx) {
                     piles[src_pile_idx]
                         .cards[piles[src_pile_idx].num_cards - 1]
-                        .orientation = 1;
+                        .orientation = FACEUP;
                 }
                 break;
         }
@@ -309,7 +311,7 @@ int main(int argc, char* argv[])
         SDL_RenderPresent(graphics.renderer);
     }
 
-    // Clean up
+    /* Clean up */
     graphics_free(&graphics);
     IMG_Quit();
     SDL_Quit();

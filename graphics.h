@@ -20,33 +20,33 @@ typedef struct {
 } CardTextures;
 
 typedef struct {
-    // Window dimensions
+    /* Window dimensions */
     int width;
     int height;
 
-    // Mouse coordinates
+    /* Mouse coordinates */
     int mouse_x;
     int mouse_y;
 
-    // Card dimensions
+    /* Card dimensions */
     int card_w;
     int card_h;
 
-    // SDL entities
+    /* SDL entities */
     SDL_Window *window;
     SDL_Renderer *renderer;
     CardTextures *textures;
 } Graphics;
 
-// Card sprite dimensions in pixels.
+/* Card sprite dimensions in pixels. */
 typedef struct {
     int w;
     int h;
 } CardSize;
 
-// A pile of cards
+/* A pile of cards */
 typedef struct {
-    // There will never be more than 2 decks of cards in a pile
+    /* There will never be more than 2 decks of cards in a pile */
     Card cards[104];
     int num_cards;
     SDL_Rect rect;
