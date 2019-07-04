@@ -234,7 +234,6 @@ int main(int argc, char* argv[])
 
         update_mouse_pile(&graphics, &mouse_pile);
         update_graphics(&graphics, num_piles);
-        printf("main: %d, %d\n", graphics.mouse_x, graphics.mouse_y);
 
 
         target = get_mouse_target(&graphics, piles, num_piles);
@@ -277,7 +276,6 @@ int main(int argc, char* argv[])
                 }
                 break;
             case SDL_FINGERMOTION:
-                printf("%f, %f\n", event.tfinger.x, event.tfinger.y);
                 set_norm_mouse_pos(&graphics, event.tfinger.x, event.tfinger.y);
                 break;
             case SDL_MOUSEMOTION:
