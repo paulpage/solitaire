@@ -70,6 +70,7 @@ MouseTarget get_mouse_target(
         Graphics *graphics,
         Pile piles[],
         int num_piles);
+void set_norm_mouse_pos(Graphics *graphics, float x, float y);
 void update_graphics(Graphics *graphics, int num_piles);
 void update_mouse_pile(Graphics *graphics, Pile *mouse_piles);
 

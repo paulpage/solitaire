@@ -227,9 +227,15 @@ MouseTarget get_mouse_target(
     return result;
 }
 
+/* Set mouse position based on normalized x and y coordinates */
+void set_norm_mouse_pos(Graphics *graphics, float x, float y)
+{
+    graphics->mouse_x = x * graphics->width;
+    graphics->mouse_y = y * graphics->height;
+}
+
 void update_graphics(Graphics *graphics, int num_piles)
 {
-        SDL_GetMouseState(&(graphics->mouse_x), &(graphics->mouse_y));
         SDL_GetWindowSize(
                 graphics->window,
                 &(graphics->width),

@@ -108,6 +108,8 @@ int check_complete(Pile *srcpile, Pile *dstpile)
              */
             while (j < srcpile->num_cards) {
                 if (srcpile->cards[j].rank != target_rank
+
+
                         || srcpile->cards[j].suit  != target_suit) {
                     break;
                 }
@@ -230,12 +232,18 @@ int main(int argc, char* argv[])
     while (!quit) {
         SDL_WaitEvent(&event);
 
+        update_mouse_pile(&graphics, &mouse_pile);
+        update_graphics(&graphics, num_piles);
+        printf("main: %d, %d\n", graphics.mouse_x, graphics.mouse_y);
+
+
         target = get_mouse_target(&graphics, piles, num_piles);
         switch (event.type) {
             case SDL_QUIT:
                 quit = true;
                 break;
             case SDL_MOUSEBUTTONDOWN:
+            case SDL_FINGERDOWN:
                 if (can_pick_up(&piles[target.pile], target.card)) {
                     src_pile_idx = target.pile;
                     move_pile(&piles[target.pile], &mouse_pile, target.card);
@@ -248,6 +256,7 @@ int main(int argc, char* argv[])
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
+            case SDL_FINGERUP:
                 dst_pile_idx = target.pile;
                 if (can_place(&mouse_pile, &piles[target.pile])) {
                     move_pile(&mouse_pile, &piles[target.pile], 0);
@@ -267,10 +276,15 @@ int main(int argc, char* argv[])
                         .orientation = FACEUP;
                 }
                 break;
-        }
+            case SDL_FINGERMOTION:
+                printf("%f, %f\n", event.tfinger.x, event.tfinger.y);
+                set_norm_mouse_pos(&graphics, event.tfinger.x, event.tfinger.y);
+                break;
+            case SDL_MOUSEMOTION:
+                SDL_GetMouseState(&graphics.mouse_x, &graphics.mouse_y);
+                break;
 
-        update_graphics(&graphics, num_piles);
-        update_mouse_pile(&graphics, &mouse_pile);
+        }
 
         int offset = graphics.card_w / 8;
         int margin = graphics.card_w / 16;
