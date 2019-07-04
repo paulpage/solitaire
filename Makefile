@@ -9,9 +9,6 @@ default: spider
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
-example: ${OBJ} example.o
-	${CC} -o $@ $^ ${LDFLAGS}
-
 spider: ${OBJ} spider.o
 	${CC} -o $@ $^ ${LDFLAGS}
 
