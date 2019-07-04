@@ -44,8 +44,11 @@ int graphics_init(Graphics *graphics, char *name)
 
     graphics->width = 800;
     graphics->height = 600;
+    graphics->margin = graphics->width / 100;
     graphics->mouse_x = 0;
     graphics->mouse_y = 0;
+    graphics->mouse_offset_x = 0;
+    graphics->mouse_offset_y = 0;
 
     SDL_SetRenderDrawColor(graphics->renderer, 0, 100, 0, 255);
     return 0;
@@ -137,9 +140,8 @@ int get_facedown_idx(Pile *pile)
 }
 
 int get_card_y(Graphics *graphics, Pile *pile, int card_idx) {
-    int margin = graphics->card_h / 16;
-    int facedown_offset = graphics->card_h / 16; /* Facedown cards */
-    int faceup_offset = graphics->card_h / 4;
+    int facedown_offset = graphics->margin; /* Facedown cards */
+    int faceup_offset = graphics->margin * 4;
 
     /* Where is the divide between facedown and faceup cards? */
     int facedown_idx = get_facedown_idx(pile);
@@ -162,21 +164,20 @@ int get_card_y(Graphics *graphics, Pile *pile, int card_idx) {
     }
 
     if (card_idx < facedown_idx) {
-        return margin + card_idx * facedown_offset;
+        return graphics->margin + card_idx * facedown_offset;
     }
-    return margin + facedown_idx * facedown_offset +
+    return graphics->margin + facedown_idx * facedown_offset +
         (card_idx - facedown_idx) * faceup_offset;
 }
 
 void draw_pile(Graphics *graphics, Pile *pile)
 {
-    int margin = graphics->card_h / 16;
     for (int i = 0; i < pile->num_cards; i++) {
         SDL_Rect rect = make_rect(
-                pile->rect.x + margin,
+                pile->rect.x + graphics->margin,
                 pile->rect.y + get_card_y(graphics, pile, i),
-                graphics->card_w - (2 * margin),
-                graphics->card_h - (2 * margin));
+                graphics->card_w - (2 * graphics->margin),
+                graphics->card_h - (2 * graphics->margin));
         draw_card(graphics, &pile->cards[i], &rect);
     }
 }
@@ -215,7 +216,6 @@ MouseTarget get_mouse_target(
     /* Mouse position relative to the pile */
     int mouse_rel_y = graphics->mouse_y - pile.rect.y;
 
-    /* MouseTarget result; */
     for (int i = pile.num_cards - 1; i >= 0; i--) {
         int card_y = get_card_y(graphics, &pile, i);
         if (mouse_rel_y > card_y && mouse_rel_y < card_y + graphics->card_h) {
@@ -247,8 +247,15 @@ void update_graphics(Graphics *graphics, int num_piles)
         SDL_RenderClear(graphics->renderer);
 }
 
+void set_mouse_target(Graphics *graphics, Pile *pile, Pile *mouse_pile, int card_idx)
+{
+    int y = get_card_y(graphics, pile, card_idx);
+    graphics->mouse_offset_x = graphics->mouse_x - pile->rect.x;
+    graphics->mouse_offset_y = graphics->margin + graphics->mouse_y - (pile->rect.y + y);
+}
+
 void update_mouse_pile(Graphics *graphics, Pile *mouse_pile)
 {
-    mouse_pile->rect.x = graphics->mouse_x - graphics->card_w / 2;
-    mouse_pile->rect.y = graphics->mouse_y - graphics->card_h / 4;
+    mouse_pile->rect.x = graphics->mouse_x - graphics->mouse_offset_x;
+    mouse_pile->rect.y = graphics->mouse_y - graphics->mouse_offset_y;
 }

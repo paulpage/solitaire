@@ -24,9 +24,16 @@ typedef struct {
     int width;
     int height;
 
+    /* Space between cards */
+    int margin;
+
     /* Mouse coordinates */
     int mouse_x;
     int mouse_y;
+
+    /* Mouse position relative to the card it's holding */
+    int mouse_offset_x;
+    int mouse_offset_y;
 
     /* Card dimensions */
     int card_w;
@@ -72,6 +79,7 @@ MouseTarget get_mouse_target(
         int num_piles);
 void set_norm_mouse_pos(Graphics *graphics, float x, float y);
 void update_graphics(Graphics *graphics, int num_piles);
+void set_mouse_target(Graphics *graphics, Pile *pile, Pile *mouse_pile, int card_idx);
 void update_mouse_pile(Graphics *graphics, Pile *mouse_piles);
 
 #endif

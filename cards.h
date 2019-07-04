@@ -9,6 +9,6 @@ typedef struct {
     Orientation orientation;
 } Card;
 
-void shuffle(Card *deck, size_t num_cards); /* TODO: put in cards */
+void shuffle(Card *deck, size_t num_cards);
 
 #endif
