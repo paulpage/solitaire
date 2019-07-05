@@ -71,15 +71,22 @@ int graphics_init(Graphics *graphics, char *name);
 void graphics_free(Graphics *graphics);
 SDL_Rect make_rect(int x, int y, int w, int h);
 void draw_card(Graphics *graphics, Card *card, SDL_Rect *rect);
-void draw_pile(Graphics *graphics, Pile *pile);
+void draw_pile(Graphics *graphics, Pile *pile, SDL_Rect *rect);
 void move_pile(Pile *srcpile, Pile *dstpile, int srcidx);
 MouseTarget get_mouse_target(
         Graphics *graphics,
         Pile piles[],
+        SDL_Rect rects[],
         int num_piles);
 void set_norm_mouse_pos(Graphics *graphics, float x, float y);
 void update_graphics(Graphics *graphics, int num_piles);
-void set_mouse_target(Graphics *graphics, Pile *pile, Pile *mouse_pile, int card_idx);
-void update_mouse_pile(Graphics *graphics, Pile *mouse_piles);
+void set_mouse_target(
+        Graphics *graphics,
+        Pile *pile,
+        SDL_Rect *pile_rect,
+        Pile *mouse_pile,
+        SDL_Rect *mouse_pile_rect,
+        int card_idx);
+void update_mouse_pile(Graphics *graphics, SDL_Rect *mouse_pile_rect);
 
 #endif

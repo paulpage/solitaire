@@ -46,7 +46,6 @@ int can_place(Pile *src, Pile *dst)
 bool is_over_deal_piles(Graphics *graphics, int num_deal_piles)
 {
     int offset = graphics->margin * 2;
-    /* int margin = graphics->card_w / 16; */
 
     int x1 = graphics->margin;
     int x2 = graphics->margin + graphics->card_w + (offset * num_deal_piles);
@@ -224,7 +223,7 @@ int main(int argc, char* argv[])
     Pile mouse_pile;
     mouse_pile.num_cards = 0;
     mouse_pile.rect = make_rect(0, 0, graphics.card_w, graphics.height);
-    update_mouse_pile(&graphics, &mouse_pile);
+    update_mouse_pile(&graphics, &mouse_pile.rect);
 
     int src_pile_idx = 0;
     int dst_pile_idx = 0;
@@ -233,7 +232,11 @@ int main(int argc, char* argv[])
         SDL_WaitEvent(&event);
 
 
-        target = get_mouse_target(&graphics, piles, num_piles);
+        SDL_Rect rects[num_piles];
+        for (int i = 0; i < num_piles; i++) {
+            rects[i] = piles[i].rect;
+        }
+        target = get_mouse_target(&graphics, piles, rects, num_piles);
         switch (event.type) {
             case SDL_QUIT:
                 quit = true;
@@ -243,7 +246,7 @@ int main(int argc, char* argv[])
                 if (can_pick_up(&piles[target.pile], target.card)) {
                     src_pile_idx = target.pile;
                     move_pile(&piles[target.pile], &mouse_pile, target.card);
-                    set_mouse_target(&graphics, &piles[target.pile], &mouse_pile, target.card);
+                    set_mouse_target(&graphics, &piles[target.pile], &(piles[target.pile].rect), &mouse_pile, &(mouse_pile.rect), target.card);
                 } else if (is_over_deal_piles(&graphics, num_deal_piles)) {
                     num_deal_piles = deal_next_set(
                             piles,
@@ -282,7 +285,7 @@ int main(int argc, char* argv[])
 
         }
 
-        update_mouse_pile(&graphics, &mouse_pile);
+        update_mouse_pile(&graphics, &mouse_pile.rect);
         update_graphics(&graphics, num_piles);
 
         int offset = graphics.margin * 2;
@@ -293,7 +296,7 @@ int main(int argc, char* argv[])
                     graphics.card_h,
                     graphics.width / num_piles,
                     graphics.height - graphics.card_h);
-            draw_pile(&graphics, &piles[i]);
+            draw_pile(&graphics, &piles[i], &(piles[i].rect));
         }
 
         for (i = 0; i < num_deal_piles; i++) {
@@ -302,7 +305,7 @@ int main(int argc, char* argv[])
                     graphics.margin,
                     graphics.width / num_piles - (graphics.margin * 2),
                     graphics.card_h - (graphics.margin * 2));
-            draw_card(&graphics, &deal_piles[i].cards[0], &deal_piles[i].rect);
+            draw_card(&graphics, &deal_piles[i].cards[0], &(deal_piles[i].rect));
         }
 
         for (i = 0; i < num_goal_piles; i++) {
@@ -315,11 +318,11 @@ int main(int argc, char* argv[])
                 draw_card(
                         &graphics,
                         &goal_piles[i].cards[0],
-                        &goal_piles[i].rect);
+                        &(goal_piles[i].rect));
             }
         }
 
-        draw_pile(&graphics, &mouse_pile);
+        draw_pile(&graphics, &mouse_pile, &(mouse_pile.rect));
         SDL_RenderPresent(graphics.renderer);
     }
 
