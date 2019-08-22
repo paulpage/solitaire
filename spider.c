@@ -151,6 +151,7 @@ int main(int argc, char* argv[])
     }
 
     bool quit = false;
+    bool mouse_down = false;
     SDL_Event event;
 
     int num_piles = 10; /* Number of piles in the main play area */
@@ -243,20 +244,34 @@ int main(int argc, char* argv[])
                 break;
             case SDL_MOUSEBUTTONDOWN:
             case SDL_FINGERDOWN:
-                if (can_pick_up(&piles[target.pile], target.card)) {
-                    src_pile_idx = target.pile;
-                    move_pile(&piles[target.pile], &mouse_pile, target.card);
-                    set_mouse_target(&graphics, &piles[target.pile], &(piles[target.pile].rect), &mouse_pile, &(mouse_pile.rect), target.card);
-                } else if (is_over_deal_piles(&graphics, num_deal_piles)) {
-                    num_deal_piles = deal_next_set(
-                            piles,
-                            deal_piles,
-                            num_piles,
-                            num_deal_piles);
+                /* Don't allow mouse down events if the mouse is already down.
+                 * fixes issue where a touch event would send a duplicate click
+                 * event.
+                 */
+                if (!mouse_down) {
+                    mouse_down = true;
+                    if (can_pick_up(&piles[target.pile], target.card)) {
+                        src_pile_idx = target.pile;
+                        move_pile(&piles[target.pile], &mouse_pile, target.card);
+                        set_mouse_target(
+                                &graphics,
+                                &piles[target.pile],
+                                &(piles[target.pile].rect),
+                                &mouse_pile,
+                                &(mouse_pile.rect),
+                                target.card);
+                    } else if (is_over_deal_piles(&graphics, num_deal_piles)) {
+                        num_deal_piles = deal_next_set(
+                                piles,
+                                deal_piles,
+                                num_piles,
+                                num_deal_piles);
+                    }
                 }
                 break;
             case SDL_MOUSEBUTTONUP:
             case SDL_FINGERUP:
+                mouse_down = false;
                 dst_pile_idx = target.pile;
                 if (can_place(&mouse_pile, &piles[target.pile])) {
                     move_pile(&mouse_pile, &piles[target.pile], 0);
