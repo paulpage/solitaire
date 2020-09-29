@@ -37,10 +37,10 @@ int graphics_init(Graphics *graphics, char *name)
     graphics->renderer = SDL_CreateRenderer(graphics->window, -1, 0);
 
     graphics->textures = malloc(sizeof(CardTextures));
-    graphics->textures->back  = load_texture(graphics, "card_back.png");
-    graphics->textures->front = load_texture(graphics, "card_front.png");
-    graphics->textures->suits = load_texture(graphics, "suits.png");
-    graphics->textures->text  = load_texture(graphics, "text.png");
+    graphics->textures->back  = load_texture(graphics, "res/card_back.png");
+    graphics->textures->front = load_texture(graphics, "res/card_front.png");
+    graphics->textures->suits = load_texture(graphics, "res/suits.png");
+    graphics->textures->text  = load_texture(graphics, "res/text.png");
 
     graphics->width = 800;
     graphics->height = 600;
@@ -242,6 +242,7 @@ void update_graphics(Graphics *graphics, int num_piles)
                 graphics->window,
                 &(graphics->width),
                 &(graphics->height));
+        graphics->margin = graphics->width / 100;
         graphics->card_w = graphics->width / num_piles;
         /* Width must be at least 1 to avoid divide by 0 errors */
         graphics->card_w = graphics->card_w > 0 ? graphics->card_w : 1;

@@ -1,7 +1,7 @@
 SRC = cards.c graphics.c
 OBJ = ${SRC:.c=.o}
 
-CFLAGS = --std=c99 -Wall -g
+CFLAGS = -Wall -g $(pkg-config --cflags --libs sdl2)
 LDFLAGS = -lSDL2 -lSDL2_image
 
 default: spider
