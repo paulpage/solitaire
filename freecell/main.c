@@ -35,10 +35,10 @@ int main(int argc, char **argv) {
     assert(graphics_init("Freecell", 800, 600));
 
     // Resources
-    Texture tex_card_back = load_texture("res/card_back.png");
-    Texture tex_card_front = load_texture("res/card_front.png");
-    Texture tex_card_suits = load_texture("res/suits.png");
-    Texture tex_card_text = load_texture("res/text.png");
+    Texture tex_card_back = load_texture("../res/card_back.png");
+    Texture tex_card_front = load_texture("../res/card_front.png");
+    Texture tex_card_suits = load_texture("../res/suits.png");
+    Texture tex_card_text = load_texture("../res/text.png");
 
     // Game Data
     Card deck[52];
@@ -74,6 +74,8 @@ int main(int argc, char **argv) {
 
     int dbg_active_pile_idx;
     int dbg_active_card_idx;
+    int dbg_active_freecell_idx;
+    int dbg_active_destination_idx;
 
     // Main loop
     // ========================================
@@ -83,23 +85,39 @@ int main(int argc, char **argv) {
         // ========================================
         SDL_GetMouseState(&mouse_x, &mouse_y);
 
-                            if (mouse_y > card_height) {
-                                // We're in the main piles
-                                int active_pile = mouse_x / card_width;
-                                int active_card = (mouse_y - card_height) / STACKING_OFFSET;
-                                for (int i = active_card; i < 52; i++) {
-                                    printf("i: %d\n", i);
-                                    printf("active pile: %d\n", active_pile);
-                                    printf("mouse_x: %d\n", mouse_x);
-                                    if (piles[active_pile][i].suit != SUIT_NONE) {
-                                        held_pile[i - active_card] = piles[active_pile][i];
-                                    }
-                                }
-                                dbg_active_pile_idx = active_pile;
-                                dbg_active_card_idx = active_card;
-                            } else {
-                                // We're in either the freecells or the destination cells
-                            }
+        dbg_active_pile_idx = -1;
+        dbg_active_card_idx = -1;
+        dbg_active_freecell_idx = -1;
+        dbg_active_destination_idx = -1;
+        if (mouse_y > card_height) {
+            // We're in the main piles
+            int active_pile = mouse_x / card_width;
+            int pile_size = 0;
+            while (pile_size < 52 && piles[active_pile][pile_size].suit != SUIT_NONE) pile_size += 1;
+            int active_card = (mouse_y - card_height) / STACKING_OFFSET;
+            if (mouse_y > (pile_size - 1) * STACKING_OFFSET + (card_height * 2) || mouse_y < card_height) {
+                active_pile = -1;
+                active_card = -1;
+            }
+            active_card = active_card > pile_size - 1 ? pile_size - 1 : active_card;
+
+            for (int i = active_card; i < 52; i++) {
+                if (piles[active_pile][i].suit != SUIT_NONE) {
+                    held_pile[i - active_card] = piles[active_pile][i];
+                }
+            }
+            dbg_active_pile_idx = active_pile;
+            dbg_active_card_idx = active_card;
+
+        } else if (mouse_x < card_width * 4) {
+            // We're in the free cells
+            int active_cell = mouse_x / card_width;
+            dbg_active_freecell_idx = active_cell;
+        } else {
+            // We're in the destination cells
+            int active_cell = (mouse_x - get_screen_width() / 2) / card_width;
+            dbg_active_destination_idx = active_cell;
+        }
 
         // Handle events
         // ========================================
@@ -136,6 +154,28 @@ int main(int argc, char **argv) {
         // Render
         // ========================================
         clear_screen(64, 128, 64, 255);
+
+        if (dbg_active_freecell_idx >= 0) {
+            Rect rect = {
+                dbg_active_freecell_idx * card_width,
+                0,
+                card_width,
+                card_height,
+            };
+            Color color = {0, 255, 0, 255};
+            draw_rect(rect, color);
+        }
+        if (dbg_active_destination_idx >= 0) {
+            Rect rect = {
+                card_width * 4 + dbg_active_destination_idx * card_width,
+                0,
+                card_width,
+                card_height,
+            };
+            Color color = {0, 0, 255, 255};
+            draw_rect(rect, color);
+        }
+
         for (int x = 0; x < MAIN_PILE_COUNT; x++) {
             for (int y = 0; y < 52; y++) {
                 if (piles[x][y].suit != SUIT_NONE) {
