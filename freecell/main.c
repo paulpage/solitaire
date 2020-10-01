@@ -89,25 +89,27 @@ int main(int argc, char **argv) {
         dbg_active_card_idx = -1;
         dbg_active_freecell_idx = -1;
         dbg_active_destination_idx = -1;
+        for (int i = 0; i < 52; i++) {
+            Card empty = {0};
+            held_pile[i] = empty;
+        }
         if (mouse_y > card_height) {
             // We're in the main piles
             int active_pile = mouse_x / card_width;
             int pile_size = 0;
             while (pile_size < 52 && piles[active_pile][pile_size].suit != SUIT_NONE) pile_size += 1;
             int active_card = (mouse_y - card_height) / STACKING_OFFSET;
-            if (mouse_y > (pile_size - 1) * STACKING_OFFSET + (card_height * 2) || mouse_y < card_height) {
-                active_pile = -1;
-                active_card = -1;
-            }
-            active_card = active_card > pile_size - 1 ? pile_size - 1 : active_card;
+            if (mouse_y < (pile_size - 1) * STACKING_OFFSET + (card_height * 2) && mouse_y > card_height) {
+                active_card = active_card > pile_size - 1 ? pile_size - 1 : active_card;
 
-            for (int i = active_card; i < 52; i++) {
-                if (piles[active_pile][i].suit != SUIT_NONE) {
-                    held_pile[i - active_card] = piles[active_pile][i];
+                for (int i = active_card; i < 52; i++) {
+                    if (piles[active_pile][i].suit != SUIT_NONE) {
+                        held_pile[i - active_card] = piles[active_pile][i];
+                    }
                 }
+                dbg_active_pile_idx = active_pile;
+                dbg_active_card_idx = active_card;
             }
-            dbg_active_pile_idx = active_pile;
-            dbg_active_card_idx = active_card;
 
         } else if (mouse_x < card_width * 4) {
             // We're in the free cells
@@ -151,7 +153,7 @@ int main(int argc, char **argv) {
             }
         }
 
-        // Render
+        // Draw
         // ========================================
         clear_screen(64, 128, 64, 255);
 
@@ -178,49 +180,89 @@ int main(int argc, char **argv) {
 
         for (int x = 0; x < MAIN_PILE_COUNT; x++) {
             for (int y = 0; y < 52; y++) {
-                if (piles[x][y].suit != SUIT_NONE) {
-                    Rect rect = {
-                        x * (card_width + 2),
-                        card_height + y * STACKING_OFFSET,
-                        card_width,
-                        card_height,
-                    };
-                    Rect suit_src_rect = {
-                        tex_card_suits.height * (piles[x][y].suit - 1),
-                        0,
-                        tex_card_suits.width / 4,
-                        tex_card_suits.height,
-                    };
-                    Rect suit_dest_rect = {
-                        rect.x + 5,
-                        rect.y + 5,
-                        20,
-                        20,
-                    };
-                    Rect rank_src_rect = {
-                        tex_card_text.width * (piles[x][y].rank - 1) / 13,
-                        tex_card_text.height * ((piles[x][y].suit - 1) / 2) / 2,
-                        tex_card_text.width / 13,
-                        tex_card_text.height / 2,
-                    };
-                    Rect rank_dest_rect = {
-                        rect.x + 30,
-                        rect.y + 5,
-                        20,
-                        20,
-                    };
-                    draw_texture(tex_card_front, rect);
-                    if (x == dbg_active_pile_idx && y == dbg_active_card_idx) {
-                        draw_texture(tex_card_back, rect);
-                    }
-                    draw_partial_texture(tex_card_suits, suit_src_rect, suit_dest_rect);
-                    draw_partial_texture(tex_card_text, rank_src_rect, rank_dest_rect);
-                    /* draw_texture(tex_card_suits, suit_dest_rect); */
+                if (piles[x][y].suit == SUIT_NONE) {
+                    break;
                 }
+                Rect rect = {
+                    x * (card_width + 2),
+                    card_height + y * STACKING_OFFSET,
+                    card_width,
+                    card_height,
+                };
+                Rect suit_src_rect = {
+                    tex_card_suits.height * (piles[x][y].suit - 1),
+                    0,
+                    tex_card_suits.width / 4,
+                    tex_card_suits.height,
+                };
+                Rect suit_dest_rect = {
+                    rect.x + 5,
+                    rect.y + 5,
+                    20,
+                    20,
+                };
+                Rect rank_src_rect = {
+                    tex_card_text.width * (piles[x][y].rank - 1) / 13,
+                    tex_card_text.height * ((piles[x][y].suit - 1) / 2) / 2,
+                    tex_card_text.width / 13,
+                    tex_card_text.height / 2,
+                };
+                Rect rank_dest_rect = {
+                    rect.x + 30,
+                    rect.y + 5,
+                    20,
+                    20,
+                };
+                draw_texture(tex_card_front, rect);
+                if (x == dbg_active_pile_idx && y == dbg_active_card_idx) {
+                    draw_texture(tex_card_back, rect);
+                }
+                draw_partial_texture(tex_card_suits, suit_src_rect, suit_dest_rect);
+                draw_partial_texture(tex_card_text, rank_src_rect, rank_dest_rect);
+                /* draw_texture(tex_card_suits, suit_dest_rect); */
             }
         }
-        graphics_swap();
 
+        for (int i = 0; i < 52; i++) {
+            if (held_pile[i].suit == SUIT_NONE) {
+                break;
+            }
+            Rect rect = {
+                mouse_x,
+                mouse_y + i * STACKING_OFFSET,
+                card_width,
+                card_height,
+            };
+            Rect suit_src_rect = {
+                tex_card_suits.height * (held_pile[i].suit - 1),
+                0,
+                tex_card_suits.width / 4,
+                tex_card_suits.height,
+            };
+            Rect suit_dest_rect = {
+                rect.x + 5,
+                rect.y + 5,
+                20,
+                20,
+            };
+            Rect rank_src_rect = {
+                tex_card_text.width * (held_pile[i].rank - 1) / 13,
+                tex_card_text.height * ((held_pile[i].suit - 1) / 2) / 2,
+                tex_card_text.width / 13,
+                tex_card_text.height / 2,
+            };
+            Rect rank_dest_rect = {
+                rect.x + 30,
+                rect.y + 5,
+                20,
+                20,
+            };
+            draw_texture(tex_card_front, rect);
+            draw_partial_texture(tex_card_suits, suit_src_rect, suit_dest_rect);
+            draw_partial_texture(tex_card_text, rank_src_rect, rank_dest_rect);
+        }
+
+        graphics_swap();
     }
 
     graphics_free();
