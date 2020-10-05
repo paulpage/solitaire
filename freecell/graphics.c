@@ -208,7 +208,7 @@ Texture load_texture(char *filename) {
 }
 
 
-Texture load_font(char *filename) {
+Font load_font(char *filename) {
 
     unsigned char ttf_buffer[1<<20];
     unsigned char temp_bitmap[256*256];
@@ -216,7 +216,7 @@ Texture load_font(char *filename) {
     GLuint tex;
 
     fread(ttf_buffer, 1, 1<<20, fopen(filename, "rb"));
-    stbtt_BakeFontBitmap(ttf_buffer, 0, 24.0f, temp_bitmap, 256, 256, 32, 96, cdata);
+    stbtt_BakeFontBitmap(ttf_buffer, 0, 20.0f, temp_bitmap, 256, 256, 32, 96, cdata);
     glGenTextures(1, &tex);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -228,8 +228,8 @@ Texture load_font(char *filename) {
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 256, 256, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
 
-    Texture texture = { tex, 256, 256 };
-    return texture;
+    Font font = { tex, cdata };
+    return font;
 }
 
 Texture create_texture(int width, int height, unsigned char *data) {
@@ -255,58 +255,71 @@ void draw_texture(Texture texture, Rect rect) {
     draw_partial_texture(texture, src_rect, rect);
 }
 
-void draw_text(Texture texture, Rect src_rect, Rect dest_rect) {
-/* void draw_text(Texture font, int x, int y, char *text) { */
+void draw_text(Font font, int x, int y, Color color, char *text) {
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
 
-    float x0 = (float)dest_rect.x * 2.0f / (float)graphics.screen_width - 1.0f;
-    float x1 = (float)(dest_rect.x + dest_rect.w) * 2.0f / (float)graphics.screen_width - 1.0f;
-    float y0 = -1.0f * ((float)dest_rect.y * 2.0f / (float)graphics.screen_height - 1.0f);
-    float y1 = -1.0f * ((float)(dest_rect.y + dest_rect.h) * 2.0f / (float)graphics.screen_height - 1.0f);
-    float tx0 = (float)src_rect.x / (float)texture.width;
-    float tx1 = (float)(src_rect.x + src_rect.w) / (float)texture.width;
-    float ty0 = (float)src_rect.y / (float)texture.height;
-    float ty1 = (float)(src_rect.y + src_rect.h) / (float)texture.height;
+    float fx = (float)x;
+    float fy = (float)y;
 
-    GLfloat vertices[48] = {
-        x0, y0, tx0, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
-        x1, y0, tx1, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
-        x1, y1, tx1, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
-        x0, y0, tx0, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
-        x1, y1, tx1, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
-        x0, y1, tx0, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
-    };
+    while (*text) {
+        if (*text >= 32 && *text < 128) {
+            stbtt_aligned_quad q;
+            stbtt_GetBakedQuad(font.cdata, 256, 256, *text - 32, &fx, &fy, &q, 1);
 
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLint uniform = glGetUniformLocation(graphics.program_texture, "tex");
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, 48 * sizeof(GLfloat), &vertices, GL_STATIC_DRAW);
-    glBindVertexArray(vao);
-    GLsizei stride = 8 * sizeof(GLfloat);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture.id);
-    glUniform1i(uniform, 0);
+            GLfloat x0 = (float)q.x0 * 2.0f / (float)graphics.screen_width - 1.0f;
+            GLfloat y0 = -1.0f * (((float)q.y0 + 16.0f) * 2.0f / (float)graphics.screen_height - 1.0f);
+            GLfloat x1 = (float)q.x1 * 2.0f / (float)graphics.screen_width - 1.0f;
+            GLfloat y1 = -1.0f * (((float)q.y1 + 16.0f) * 2.0f / (float)graphics.screen_height - 1.0f);
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(4 * sizeof(GLfloat))); // TODO is this void pointer correct?
+            float c[4] = {
+                (float)color.r / 255.0f,
+                (float)color.g / 255.0f,
+                (float)color.b / 255.0f,
+                (float)color.a / 255.0f,
+            };
+            GLfloat vertices[48] = {
+                x0, y0, q.s0, q.t0, c[0], c[1], c[2], c[3],
+                x1, y0, q.s1, q.t0, c[0], c[1], c[2], c[3],
+                x1, y1, q.s1, q.t1, c[0], c[1], c[2], c[3],
+                x0, y0, q.s0, q.t0, c[0], c[1], c[2], c[3],
+                x1, y1, q.s1, q.t1, c[0], c[1], c[2], c[3],
+                x0, y1, q.s0, q.t1, c[0], c[1], c[2], c[3],
+            };
 
-    glUseProgram(graphics.program_text);
-    glDrawArrays(GL_TRIANGLES, 0, 48);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+            GLuint vao = 0;
+            GLuint vbo = 0;
+            GLint uniform = glGetUniformLocation(graphics.program_text, "tex");
+            glGenVertexArrays(1, &vao);
+            glGenBuffers(1, &vbo);
+            glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            glBufferData(GL_ARRAY_BUFFER, 48 * sizeof(GLfloat), &vertices, GL_STATIC_DRAW);
+            glBindVertexArray(vao);
+            GLsizei stride = 8 * sizeof(GLfloat);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, font.tex);
+            glUniform1i(uniform, 0);
 
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
+            glEnableVertexAttribArray(0);
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
+            glEnableVertexAttribArray(1);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
+            glEnableVertexAttribArray(2);
+            glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(4 * sizeof(GLfloat))); // TODO is this void pointer correct?
+
+            glUseProgram(graphics.program_text);
+            glDrawArrays(GL_TRIANGLES, 0, 48);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            glBindVertexArray(0);
+
+            glDeleteBuffers(1, &vbo);
+            glDeleteVertexArrays(1, &vao);
+        }
+
+        text++;
+    }
 }
 
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect) {

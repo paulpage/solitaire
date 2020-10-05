@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#include "lib/stb_truetype.h"
+
 typedef struct {
     int r;
     int g;
@@ -37,17 +39,22 @@ typedef struct {
     int height;
 } Texture;
 
+typedef struct {
+    GLuint tex;
+    stbtt_bakedchar *cdata;
+} Font;
+
 bool graphics_init(char *window_name, int width, int height);
 void graphics_free();
 void graphics_swap();
 
 void draw_rect(Rect rect, Color color);
 Texture load_texture(char *filename);
-Texture load_font(char *filename);
+Font load_font(char *filename);
 Texture create_texture(int width, int height, unsigned char *data);
 void free_texture(Texture texture);
 void draw_texture(Texture texture, Rect rect);
-void draw_text(Texture texture, Rect src_rect, Rect dest_rect);
+void draw_text(Font font, int x, int y, Color color, char *text);
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect);
 void clear_screen(int r, int g, int b, int a);
 int get_screen_width();

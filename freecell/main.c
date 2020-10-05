@@ -54,7 +54,7 @@ void shuffle(Card deck[], int num_cards) {
 // HELPER PROCS
 // ----------------------------------------
 
-void draw_card(Card card, Rect rect) {
+void draw_card(Font font, Card card, Rect rect) {
     Rect suit_src_rect = {
         tex_card_suits.height * (card.suit - 1),
         0,
@@ -67,21 +67,18 @@ void draw_card(Card card, Rect rect) {
         16,
         16,
     };
-    Rect rank_src_rect = {
-        tex_card_text.width * (card.rank - 1) / 13,
-        tex_card_text.height * ((card.suit - 1) / 2) / 2,
-        tex_card_text.width / 13,
-        tex_card_text.height / 2,
-    };
-    Rect rank_dest_rect = {
-        rect.x + 30,
-        rect.y + 5,
-        20,
-        20,
-    };
+
     draw_texture(tex_card_front, rect);
     draw_partial_texture(tex_card_suits, suit_src_rect, suit_dest_rect);
-    draw_partial_texture(tex_card_text, rank_src_rect, rank_dest_rect);
+
+    char *text[] = {"NONE", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
+    Color c;
+    if (card.suit / 3 == 0) {
+        c = (Color){0, 0, 0, 255};
+    } else {
+        c = (Color){255, 0, 0, 255};
+    }
+    draw_text(font, rect.x + 25, rect.y + 3, c, text[card.rank]);
 }
 
 // MAIN
@@ -96,7 +93,7 @@ int main(int argc, char **argv) {
     tex_card_suits = load_texture("../res/suits_16.png");
     tex_card_text = load_texture("../res/text.png");
 
-    Texture font = load_font("../res/Vera.ttf");
+    Font font = load_font("../res/Vera.ttf");
 
     // Game Data
     Card deck[52];
@@ -347,7 +344,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(free_cells[i], rect);
+                draw_card(font, free_cells[i], rect);
             }
         }
 
@@ -359,7 +356,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(destination_cells[i], rect);
+                draw_card(font, destination_cells[i], rect);
             }
         }
 
@@ -374,7 +371,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(piles[x][y], rect);
+                draw_card(font, piles[x][y], rect);
             }
         }
 
@@ -388,11 +385,10 @@ int main(int argc, char **argv) {
                 card_width,
                 card_height,
             };
-            draw_card(held_pile[i], rect);
+            draw_card(font, held_pile[i], rect);
         }
 
         Rect rect = {0, 0, 256, 256};
-        draw_text(font, rect, rect);
 
         graphics_swap();
     }
