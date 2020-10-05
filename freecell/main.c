@@ -8,7 +8,7 @@
 #define MAIN_PILE_COUNT 8
 
 // TODO this should be dynamic for scaling
-#define STACKING_OFFSET 20
+#define STACKING_OFFSET 24
 
 // TODO make sure card_height and card_width include the margins -
 // So cards being spaced out will be purely cosmetic; the logical
@@ -64,8 +64,8 @@ void draw_card(Card card, Rect rect) {
     Rect suit_dest_rect = {
         rect.x + 5,
         rect.y + 5,
-        20,
-        20,
+        16,
+        16,
     };
     Rect rank_src_rect = {
         tex_card_text.width * (card.rank - 1) / 13,
@@ -93,8 +93,10 @@ int main(int argc, char **argv) {
 
     tex_card_back = load_texture("../res/card_back.png");
     tex_card_front = load_texture("../res/card_front.png");
-    tex_card_suits = load_texture("../res/suits.png");
+    tex_card_suits = load_texture("../res/suits_16.png");
     tex_card_text = load_texture("../res/text.png");
+
+    Texture font = load_font("../res/Vera.ttf");
 
     // Game Data
     Card deck[52];
@@ -389,8 +391,12 @@ int main(int argc, char **argv) {
             draw_card(held_pile[i], rect);
         }
 
+        Rect rect = {0, 0, 256, 256};
+        draw_text(font, rect, rect);
+
         graphics_swap();
     }
+
 
     graphics_free();
 }

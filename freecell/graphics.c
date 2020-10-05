@@ -3,6 +3,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "lib/stb_image.h"
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "lib/stb_truetype.h"
+
 static Graphics graphics;
 
 static GLchar *VERT_SRC_2D =
@@ -20,6 +23,29 @@ static GLchar *FRAG_SRC_2D =
 "in vec4 v_color;\n"
 "void main() {\n"
 "    gl_FragColor = v_color;\n"
+"}\n";
+
+static GLchar *VERT_SRC_TEXT =
+"#version 330 core\n"
+"layout (location = 0) in vec2 position;\n"
+"layout (location = 1) in vec2 tex_coords;\n"
+"layout (location = 2) in vec4 color;\n"
+"out vec2 v_tex_coords;\n"
+"out vec4 v_color;\n"
+"void main() {\n"
+"    gl_Position = vec4(position, 0.0, 1.0);\n"
+"    v_tex_coords = tex_coords;\n"
+"    v_color = color;\n"
+"}\n";
+
+static GLchar *FRAG_SRC_TEXT =
+"#version 330 core\n"
+"uniform sampler2D tex;\n"
+"in vec2 v_tex_coords;\n"
+"in vec4 v_color;\n"
+"out vec4 f_color;\n"
+"void main() {\n"
+"    f_color = v_color * vec4(1.0, 1.0, 1.0, texture(tex, v_tex_coords).r);\n"
 "}\n";
 
 static GLchar *VERT_SRC_2D_TEXTURE =
@@ -98,9 +124,13 @@ bool graphics_init(char *window_name, int width, int height) {
         return false;
     }
     GLuint program_2d = create_program(VERT_SRC_2D, FRAG_SRC_2D);
+    GLuint program_text = create_program(VERT_SRC_TEXT, FRAG_SRC_TEXT);
     GLuint program_texture = create_program(VERT_SRC_2D_TEXTURE, FRAG_SRC_2D_TEXTURE);
 
     glViewport(0, 0, width, height);
+
+    glDepthFunc(GL_LESS);
+    glEnable(GL_BLEND);
 
     graphics = (Graphics) {
         window,
@@ -108,6 +138,7 @@ bool graphics_init(char *window_name, int width, int height) {
         width,
         height,
         program_2d,
+        program_text,
         program_texture,
     };
     return true;
@@ -176,6 +207,31 @@ Texture load_texture(char *filename) {
     return texture;
 }
 
+
+Texture load_font(char *filename) {
+
+    unsigned char ttf_buffer[1<<20];
+    unsigned char temp_bitmap[256*256];
+    stbtt_bakedchar cdata[96];
+    GLuint tex;
+
+    fread(ttf_buffer, 1, 1<<20, fopen(filename, "rb"));
+    stbtt_BakeFontBitmap(ttf_buffer, 0, 24.0f, temp_bitmap, 256, 256, 32, 96, cdata);
+    glGenTextures(1, &tex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 256, 256, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
+
+    Texture texture = { tex, 256, 256 };
+    return texture;
+}
+
 Texture create_texture(int width, int height, unsigned char *data) {
     GLuint id = 0;
     glGenTextures(1, &id);
@@ -197,6 +253,60 @@ void free_texture(Texture texture) {
 void draw_texture(Texture texture, Rect rect) {
     Rect src_rect = {0, 0, texture.width, texture.height};
     draw_partial_texture(texture, src_rect, rect);
+}
+
+void draw_text(Texture texture, Rect src_rect, Rect dest_rect) {
+/* void draw_text(Texture font, int x, int y, char *text) { */
+
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+
+    float x0 = (float)dest_rect.x * 2.0f / (float)graphics.screen_width - 1.0f;
+    float x1 = (float)(dest_rect.x + dest_rect.w) * 2.0f / (float)graphics.screen_width - 1.0f;
+    float y0 = -1.0f * ((float)dest_rect.y * 2.0f / (float)graphics.screen_height - 1.0f);
+    float y1 = -1.0f * ((float)(dest_rect.y + dest_rect.h) * 2.0f / (float)graphics.screen_height - 1.0f);
+    float tx0 = (float)src_rect.x / (float)texture.width;
+    float tx1 = (float)(src_rect.x + src_rect.w) / (float)texture.width;
+    float ty0 = (float)src_rect.y / (float)texture.height;
+    float ty1 = (float)(src_rect.y + src_rect.h) / (float)texture.height;
+
+    GLfloat vertices[48] = {
+        x0, y0, tx0, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
+        x1, y0, tx1, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
+        x1, y1, tx1, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
+        x0, y0, tx0, ty0, 1.0f, 1.0f, 1.0f, 0.5f,
+        x1, y1, tx1, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
+        x0, y1, tx0, ty1, 1.0f, 1.0f, 1.0f, 0.5f,
+    };
+
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLint uniform = glGetUniformLocation(graphics.program_texture, "tex");
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 48 * sizeof(GLfloat), &vertices, GL_STATIC_DRAW);
+    glBindVertexArray(vao);
+    GLsizei stride = 8 * sizeof(GLfloat);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+    glUniform1i(uniform, 0);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(4 * sizeof(GLfloat))); // TODO is this void pointer correct?
+
+    glUseProgram(graphics.program_text);
+    glDrawArrays(GL_TRIANGLES, 0, 48);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
 }
 
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect) {
@@ -222,22 +332,6 @@ void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect) {
         x1, y1, tx1, ty1,
         x0, y1, tx0, ty1,
     };
-
-    /* RectF src = normalize(src_rect, texture.width, texture.height, -1.0f, 1.0f); */
-    /* RectF dest = normalize(dest_rect, graphics.screen_width, graphics.screen_height, 0.0f, 1.0f); */
-    /* float dest_x = (float)dest_rect.x * 2.0f / (float)graphics.screen_width - 1.0f; */
-    /* float dest_y = 1.0f - (float)dest_rect.y * 2.0f / (float)graphics.screen_height; */
-    /* float dest_width = (float)dest_rect.w * 2.0f / (float)graphics.screen_width; */
-    /* float dest_height = -1.0f * (float)rect.h * 2.0f / (float)graphics.screen_height; */
-
-    /* GLfloat vertices[24] = { */
-    /*     dest.x, dest.y, 0.0f, 1.0f, */
-    /*     dest.x + dest.width, dest.y, 1.0f, 1.0f, */
-    /*     dest.x + dest.width, dest.y + dest.height, 1.0f, 0.0f, */
-    /*     dest.x, dest.y, 0.0f, 1.0f, */
-    /*     dest.x + dest.width, dest.y + dest.height, 1.0f, 0.0f, */
-    /*     dest.x, dest.y + dest.height, 0.0f, 0.0f, */
-    /* }; */
 
     GLuint vao = 0;
     GLuint vbo = 0;
