@@ -31,6 +31,8 @@ Texture tex_card_front;
 Texture tex_card_suits;
 Texture tex_card_text;
 
+Font font;
+
 // HELPER FUNCTIONS
 // ----------------------------------------
 
@@ -54,7 +56,7 @@ void shuffle(Card deck[], int num_cards) {
 // HELPER PROCS
 // ----------------------------------------
 
-void draw_card(Font font, Card card, Rect rect) {
+void draw_card(Card card, Rect rect) {
     Rect suit_src_rect = {
         tex_card_suits.height * (card.suit - 1),
         0,
@@ -93,7 +95,7 @@ int main(int argc, char **argv) {
     tex_card_suits = load_texture("../res/suits_16.png");
     tex_card_text = load_texture("../res/text.png");
 
-    Font font = load_font("../res/Vera.ttf");
+    font = load_font("../res/Vera.ttf");
 
     // Game Data
     Card deck[52];
@@ -121,7 +123,8 @@ int main(int argc, char **argv) {
         card_width = width / MAIN_PILE_COUNT - 2;
         card_height = card_width * tex_card_front.height / tex_card_front.width;
     }
-    int mouse_offset_x = 0, mouse_offset_y = 0;
+    int mouse_offset_x = card_width / 2;
+    int mouse_offset_y = card_height / 2;
 
     // Platform state
     int mouse_x = 0, mouse_y = 0;
@@ -130,11 +133,6 @@ int main(int argc, char **argv) {
     SDL_Event event;
     bool quit = false;
 
-    int dbg_active_pile_idx;
-    int dbg_active_card_idx;
-    int dbg_active_freecell_idx;
-    int dbg_active_destination_idx;
-
     // Main loop
     // ========================================
     while (!quit) {
@@ -142,11 +140,6 @@ int main(int argc, char **argv) {
         // Update game state
         // ========================================
         SDL_GetMouseState(&mouse_x, &mouse_y);
-
-        dbg_active_pile_idx = -1;
-        dbg_active_card_idx = -1;
-        dbg_active_freecell_idx = -1;
-        dbg_active_destination_idx = -1;
 
         if (mouse_y > card_height) {
             // We're in the main piles
@@ -161,7 +154,6 @@ int main(int argc, char **argv) {
 
                 // Check if we can legally place this card on the current stack
                 bool can_place = true;
-                Card last_card = CARD_NONE;
                 int i = 1;
                 while (piles[active_pile][i].suit != SUIT_NONE) i += 1;
                 Card dest = piles[active_pile][i - 1];
@@ -210,8 +202,6 @@ int main(int argc, char **argv) {
                         piles[active_pile][i] = CARD_NONE;
                     }
                 }
-                dbg_active_pile_idx = active_pile;
-                dbg_active_card_idx = active_card;
                 last_active_pile = active_pile; // TODO does this go in the if (can_pick_up) or not?
             }
 
@@ -233,7 +223,6 @@ int main(int argc, char **argv) {
                     held_pile[0] = CARD_NONE;
                 }
             }
-            dbg_active_freecell_idx = active;
 
         } else {
             // We're in the destination cells
@@ -280,7 +269,6 @@ int main(int argc, char **argv) {
                     }
                 }
             }
-            dbg_active_destination_idx = active;
         }
 
         // Handle events
@@ -315,27 +303,6 @@ int main(int argc, char **argv) {
         // ========================================
         clear_screen(64, 128, 64, 255);
 
-        if (dbg_active_freecell_idx >= 0) {
-            Rect rect = {
-                dbg_active_freecell_idx * card_width,
-                0,
-                card_width,
-                card_height,
-            };
-            Color color = {0, 255, 0, 255};
-            draw_rect(rect, color);
-        }
-        if (dbg_active_destination_idx >= 0) {
-            Rect rect = {
-                card_width * 4 + dbg_active_destination_idx * card_width,
-                0,
-                card_width,
-                card_height,
-            };
-            Color color = {0, 0, 255, 255};
-            draw_rect(rect, color);
-        }
-
         for (int i = 0; i < 4; i++) {
             if (free_cells[i].suit != SUIT_NONE) {
                 Rect rect = {
@@ -344,7 +311,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(font, free_cells[i], rect);
+                draw_card(free_cells[i], rect);
             }
         }
 
@@ -356,7 +323,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(font, destination_cells[i], rect);
+                draw_card(destination_cells[i], rect);
             }
         }
 
@@ -371,7 +338,7 @@ int main(int argc, char **argv) {
                     card_width,
                     card_height,
                 };
-                draw_card(font, piles[x][y], rect);
+                draw_card(piles[x][y], rect);
             }
         }
 
@@ -380,15 +347,13 @@ int main(int argc, char **argv) {
                 break;
             }
             Rect rect = {
-                mouse_x,
-                mouse_y + i * STACKING_OFFSET,
+                mouse_x - mouse_offset_x,
+                mouse_y + i * STACKING_OFFSET - mouse_offset_y,
                 card_width,
                 card_height,
             };
-            draw_card(font, held_pile[i], rect);
+            draw_card(held_pile[i], rect);
         }
-
-        Rect rect = {0, 0, 256, 256};
 
         graphics_swap();
     }
