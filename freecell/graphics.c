@@ -111,7 +111,7 @@ static GLuint create_program(char *vert_src, char *frag_src) {
 bool graphics_init(char *window_name, int width, int height) {
     // TODO add error checking here
     /* SDL_Window *window = SDL_CreateWindow(window_name, 0, 0, width, height, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE); */
-    SDL_Window *window = SDL_CreateWindow(window_name, 0, 0, width, height, SDL_WINDOW_OPENGL);
+    SDL_Window *window = SDL_CreateWindow(window_name, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, width, height, SDL_WINDOW_OPENGL);
 
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 3 );
     SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 3 );

@@ -10,10 +10,6 @@
 // TODO this should be dynamic for scaling
 #define STACKING_OFFSET 24
 
-// TODO make sure card_height and card_width include the margins -
-// So cards being spaced out will be purely cosmetic; the logical
-// cards will be touching. This will make math easier.
-
 typedef enum { SUIT_NONE, SUIT_SPADE, SUIT_CLUB, SUIT_HEART, SUIT_DIAMOND } Suit;
 typedef struct {
     int rank;
@@ -120,7 +116,7 @@ int main(int argc, char **argv) {
     int card_width, card_height;
     {
         int width = get_screen_width();
-        card_width = width / MAIN_PILE_COUNT - 2;
+        card_width = width / MAIN_PILE_COUNT;
         card_height = card_width * tex_card_front.height / tex_card_front.width;
     }
     int mouse_offset_x = card_width / 2;
@@ -161,6 +157,7 @@ int main(int argc, char **argv) {
 
                 if (src.suit / 3 == dest.suit / 3) can_place = false;
                 if (src.rank != dest.rank - 1) can_place = false;
+                if (dest.suit == SUIT_NONE) can_place = true;
 
                 // Put held cards back onto the last pile
                 int start = 0;
@@ -306,10 +303,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 4; i++) {
             if (free_cells[i].suit != SUIT_NONE) {
                 Rect rect = {
-                    i * card_width,
-                    0,
-                    card_width,
-                    card_height,
+                    i * card_width + 1,
+                    1,
+                    card_width - 2,
+                    card_height - 2,
                 };
                 draw_card(free_cells[i], rect);
             }
@@ -318,10 +315,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 4; i++) {
             if (destination_cells[i].suit != SUIT_NONE) {
                 Rect rect = {
-                    (i + 4) * card_width,
-                    0,
-                    card_width,
-                    card_height,
+                    (i + 4) * card_width + 1,
+                    1,
+                    card_width - 2,
+                    card_height - 2,
                 };
                 draw_card(destination_cells[i], rect);
             }
@@ -333,10 +330,10 @@ int main(int argc, char **argv) {
                     break;
                 }
                 Rect rect = {
-                    x * (card_width + 2),
-                    card_height + y * STACKING_OFFSET,
-                    card_width,
-                    card_height,
+                    x * card_width + 1,
+                    card_height + y * STACKING_OFFSET + 1,
+                    card_width - 2,
+                    card_height - 2,
                 };
                 draw_card(piles[x][y], rect);
             }
@@ -347,17 +344,16 @@ int main(int argc, char **argv) {
                 break;
             }
             Rect rect = {
-                mouse_x - mouse_offset_x,
-                mouse_y + i * STACKING_OFFSET - mouse_offset_y,
-                card_width,
-                card_height,
+                mouse_x - mouse_offset_x + 1,
+                mouse_y + i * STACKING_OFFSET - mouse_offset_y + 1,
+                card_width - 2,
+                card_height - 2,
             };
             draw_card(held_pile[i], rect);
         }
 
         graphics_swap();
     }
-
 
     graphics_free();
 }
