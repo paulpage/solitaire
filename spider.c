@@ -128,8 +128,7 @@ int check_complete(Pile *srcpile, Pile *dstpile)
     return false;
 }
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     /* Seed the random number generator */
     srand(time(NULL));
 
@@ -229,76 +228,85 @@ int main(int argc, char* argv[])
     int src_pile_idx = 0;
     int dst_pile_idx = 0;
 
-    while (!quit) {
-        SDL_WaitEvent(&event);
+    float t_freq = (float)SDL_GetPerformanceFrequency();
+    Uint64 t = SDL_GetPerformanceCounter();
 
+    while (!quit) {
+
+        Uint64 t1 = SDL_GetPerformanceCounter();
+        float elapsed_ms = (t1 - t) / t_freq * 1000.0f;
+        printf("Frame time: %f ms\n", elapsed_ms);
+        t = t1;
+
+        while (SDL_PollEvent(&event) != 0) {
+            switch (event.type) {
+                case SDL_QUIT:
+                    quit = true;
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                case SDL_FINGERDOWN:
+                    /* Don't allow mouse down events if the mouse is already down.
+                     * fixes issue where a touch event would send a duplicate click
+                     * event.
+                     */
+                    if (!mouse_down) {
+                        mouse_down = true;
+                        if (can_pick_up(&piles[target.pile], target.card)) {
+                            src_pile_idx = target.pile;
+                            move_pile(&piles[target.pile], &mouse_pile, target.card);
+                            set_mouse_target(
+                                    &graphics,
+                                    &piles[target.pile],
+                                    &(piles[target.pile].rect),
+                                    &mouse_pile,
+                                    &(mouse_pile.rect),
+                                    target.card);
+                        } else if (is_over_deal_piles(&graphics, num_deal_piles)) {
+                            num_deal_piles = deal_next_set(
+                                    piles,
+                                    deal_piles,
+                                    num_piles,
+                                    num_deal_piles);
+                        }
+                    }
+                    break;
+                case SDL_MOUSEBUTTONUP:
+                case SDL_FINGERUP:
+                    mouse_down = false;
+                    dst_pile_idx = target.pile;
+                    if (can_place(&mouse_pile, &piles[target.pile])) {
+                        move_pile(&mouse_pile, &piles[target.pile], 0);
+                        if (check_complete(&piles[target.pile],
+                                    &goal_piles[num_completed_piles])) {
+                            num_completed_piles++;
+                            if (num_completed_piles == 8) {
+                                printf("WIN!!!!");
+                            }
+                        }
+                    } else {
+                        move_pile(&mouse_pile, &piles[src_pile_idx], 0);
+                    }
+                    if (dst_pile_idx != src_pile_idx) {
+                        piles[src_pile_idx]
+                            .cards[piles[src_pile_idx].num_cards - 1]
+                            .orientation = FACEUP;
+                    }
+                    break;
+                case SDL_FINGERMOTION:
+                    set_norm_mouse_pos(&graphics, event.tfinger.x, event.tfinger.y);
+                    break;
+                case SDL_MOUSEMOTION:
+                    SDL_GetMouseState(&graphics.mouse_x, &graphics.mouse_y);
+                    break;
+
+            }
+        }
 
         SDL_Rect rects[num_piles];
         for (int i = 0; i < num_piles; i++) {
             rects[i] = piles[i].rect;
         }
         target = get_mouse_target(&graphics, piles, rects, num_piles);
-        switch (event.type) {
-            case SDL_QUIT:
-                quit = true;
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-            case SDL_FINGERDOWN:
-                /* Don't allow mouse down events if the mouse is already down.
-                 * fixes issue where a touch event would send a duplicate click
-                 * event.
-                 */
-                if (!mouse_down) {
-                    mouse_down = true;
-                    if (can_pick_up(&piles[target.pile], target.card)) {
-                        src_pile_idx = target.pile;
-                        move_pile(&piles[target.pile], &mouse_pile, target.card);
-                        set_mouse_target(
-                                &graphics,
-                                &piles[target.pile],
-                                &(piles[target.pile].rect),
-                                &mouse_pile,
-                                &(mouse_pile.rect),
-                                target.card);
-                    } else if (is_over_deal_piles(&graphics, num_deal_piles)) {
-                        num_deal_piles = deal_next_set(
-                                piles,
-                                deal_piles,
-                                num_piles,
-                                num_deal_piles);
-                    }
-                }
-                break;
-            case SDL_MOUSEBUTTONUP:
-            case SDL_FINGERUP:
-                mouse_down = false;
-                dst_pile_idx = target.pile;
-                if (can_place(&mouse_pile, &piles[target.pile])) {
-                    move_pile(&mouse_pile, &piles[target.pile], 0);
-                    if (check_complete(&piles[target.pile],
-                                &goal_piles[num_completed_piles])) {
-                        num_completed_piles++;
-                        if (num_completed_piles == 8) {
-                            printf("WIN!!!!");
-                        }
-                    }
-                } else {
-                    move_pile(&mouse_pile, &piles[src_pile_idx], 0);
-                }
-                if (dst_pile_idx != src_pile_idx) {
-                    piles[src_pile_idx]
-                        .cards[piles[src_pile_idx].num_cards - 1]
-                        .orientation = FACEUP;
-                }
-                break;
-            case SDL_FINGERMOTION:
-                set_norm_mouse_pos(&graphics, event.tfinger.x, event.tfinger.y);
-                break;
-            case SDL_MOUSEMOTION:
-                SDL_GetMouseState(&graphics.mouse_x, &graphics.mouse_y);
-                break;
-
-        }
 
         update_mouse_pile(&graphics, &mouse_pile.rect);
         update_graphics(&graphics, num_piles);

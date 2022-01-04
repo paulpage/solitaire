@@ -14,3 +14,6 @@ freecell: ${OBJ} main.o
 
 clean:
 	rm -f freecell *.o
+
+run: freecell
+	./freecell

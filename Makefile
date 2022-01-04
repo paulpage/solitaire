@@ -14,3 +14,6 @@ spider: ${OBJ} spider.o
 
 clean:
 	rm -f spider *.o
+
+run: spider
+	./spider
