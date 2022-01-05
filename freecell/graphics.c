@@ -322,6 +322,70 @@ void draw_text(Font font, int x, int y, Color color, char *text) {
     }
 }
 
+void gl_draw_textures(Texture texture, Rect src_rects[], Rect dest_rects[], int count) {
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+
+    GLfloat *vertices = malloc(24 * count * sizeof(GLfloat));
+
+    for (int i = 0; i < count; i++) {
+
+        Rect src_rect = src_rects[i];
+        Rect dest_rect = dest_rects[i];
+
+        float x0 = (float)dest_rect.x * 2.0f / (float)graphics.screen_width - 1.0f;
+        float x1 = (float)(dest_rect.x + dest_rect.w) * 2.0f / (float)graphics.screen_width - 1.0f;
+        float y0 = -1.0f * ((float)dest_rect.y * 2.0f / (float)graphics.screen_height - 1.0f);
+        float y1 = -1.0f * ((float)(dest_rect.y + dest_rect.h) * 2.0f / (float)graphics.screen_height - 1.0f);
+        float tx0 = (float)src_rect.x / (float)texture.width;
+        float tx1 = (float)(src_rect.x + src_rect.w) / (float)texture.width;
+        float ty0 = (float)src_rect.y / (float)texture.height;
+        float ty1 = (float)(src_rect.y + src_rect.h) / (float)texture.height;
+
+        GLfloat rect_vertices[24] = {
+            x0, y0, tx0, ty0,
+            x1, y0, tx1, ty0,
+            x1, y1, tx1, ty1,
+            x0, y0, tx0, ty0,
+            x1, y1, tx1, ty1,
+            x0, y1, tx0, ty1,
+        };
+
+        for (int j = 0; j < 24; j++) {
+            vertices[i * 24 + j] = rect_vertices[j];
+        }
+    }
+
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLint uniform = glGetUniformLocation(graphics.program_texture, "tex");
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 24 * count * sizeof(GLfloat), vertices, GL_STATIC_DRAW);
+    glBindVertexArray(vao);
+    GLsizei stride = 4 * sizeof(GLfloat);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.id);
+    glUniform1i(uniform, 0);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
+
+    glUseProgram(graphics.program_texture);
+    glDrawArrays(GL_TRIANGLES, 0, 24 * count);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
+
+    free(vertices);
+}
+
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect) {
 
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

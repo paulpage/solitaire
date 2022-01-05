@@ -54,6 +54,7 @@ Font load_font(char *filename);
 Texture create_texture(int width, int height, unsigned char *data);
 void free_texture(Texture texture);
 void draw_texture(Texture texture, Rect rect);
+void gl_draw_textures(Texture texture, Rect src_rects[], Rect dest_rects[], int count);
 void draw_text(Font font, int x, int y, Color color, char *text);
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect);
 void clear_screen(int r, int g, int b, int a);

@@ -79,6 +79,57 @@ void draw_card(Card card, Rect rect) {
     draw_text(font, rect.x + 25, rect.y + 3, c, text[card.rank]);
 }
 
+void draw_cards(Card cards[], Rect rects[], int count) {
+
+    Rect *card_src_rects = malloc(count * sizeof(Rect));
+    Rect *suit_src_rects = malloc(count * sizeof(Rect));
+    Rect *suit_dest_rects = malloc(count * sizeof(Rect));
+    for (int i = 0; i < count; i++) {
+        Card card = cards[i];
+        Rect rect = rects[i];
+        card_src_rects[i] = (Rect){
+            0,
+            0,
+            tex_card_front.width,
+            tex_card_front.height,
+        };
+        suit_src_rects[i] = (Rect){
+            tex_card_suits.height * (card.suit - 1),
+            0,
+            tex_card_suits.width / 4,
+            tex_card_suits.height,
+        };
+        suit_dest_rects[i] = (Rect){
+            rect.x + 5,
+            rect.y + 5,
+            16,
+            16,
+        };
+    }
+
+    gl_draw_textures(tex_card_front, card_src_rects, rects, count);
+    draw_partial_texture(tex_card_front, card_src_rects[0], rects[0]);
+    gl_draw_textures(tex_card_suits, suit_src_rects, suit_dest_rects, count);
+
+    for (int i = 0; i < count; i++) {
+        Card card = cards[i];
+        Rect rect = rects[i];
+
+        char *text[] = {"NONE", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
+        Color c;
+        if (card.suit / 3 == 0) {
+            c = (Color){0, 0, 0, 255};
+        } else {
+            c = (Color){255, 0, 0, 255};
+        }
+        draw_text(font, rect.x + 25, rect.y + 3, c, text[card.rank]);
+    }
+
+    free(card_src_rects);
+    free(suit_src_rects);
+    free(suit_dest_rects);
+}
+
 // MAIN
 // ----------------------------------------
 
@@ -300,6 +351,10 @@ int main(int argc, char **argv) {
         // ========================================
         clear_screen(64, 128, 64, 255);
 
+        Card cards_to_draw[52];
+        Rect rects_to_draw[52];
+        int count = 0;
+
         for (int i = 0; i < 4; i++) {
             if (free_cells[i].suit != SUIT_NONE) {
                 Rect rect = {
@@ -308,7 +363,10 @@ int main(int argc, char **argv) {
                     card_width - 2,
                     card_height - 2,
                 };
-                draw_card(free_cells[i], rect);
+                /* draw_card(free_cells[i], rect); */
+                cards_to_draw[count] = free_cells[i];
+                rects_to_draw[count] = rect;
+                count++;
             }
         }
 
@@ -320,7 +378,9 @@ int main(int argc, char **argv) {
                     card_width - 2,
                     card_height - 2,
                 };
-                draw_card(destination_cells[i], rect);
+                cards_to_draw[count] = destination_cells[i];
+                rects_to_draw[count] = rect;
+                count++;
             }
         }
 
@@ -335,7 +395,10 @@ int main(int argc, char **argv) {
                     card_width - 2,
                     card_height - 2,
                 };
-                draw_card(piles[x][y], rect);
+                /* draw_card(piles[x][y], rect); */
+                cards_to_draw[count] = piles[x][y];
+                rects_to_draw[count] = rect;
+                count++;
             }
         }
 
@@ -349,8 +412,13 @@ int main(int argc, char **argv) {
                 card_width - 2,
                 card_height - 2,
             };
-            draw_card(held_pile[i], rect);
+            /* draw_card(held_pile[i], rect); */
+            cards_to_draw[count] = held_pile[i];
+            rects_to_draw[count] = rect;
+            count++;
         }
+
+        draw_cards(cards_to_draw, rects_to_draw, count);
 
         graphics_swap();
     }
