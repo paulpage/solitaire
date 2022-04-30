@@ -1,4 +1,4 @@
-SRC = graphics.c
+SRC = graphics.c timer.c
 OBJ = ${SRC:.c=.o}
 
 CFLAGS = -Wall -g `pkg-config --cflags --libs sdl2 gl glew`

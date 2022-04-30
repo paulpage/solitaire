@@ -12,6 +12,7 @@ static GLchar *VERT_SRC_2D =
 "#version 330 core\n"
 "layout (location = 0) in vec2 position;\n"
 "layout (location = 1) in vec4 color;\n"
+"out vec2 v_position;\n"
 "out vec4 v_color;\n"
 "void main() {\n"
 "    v_color = color;\n"
@@ -20,8 +21,16 @@ static GLchar *VERT_SRC_2D =
 
 static GLchar *FRAG_SRC_2D =
 "#version 330 core\n"
+"in vec2 v_position\n"
 "in vec4 v_color;\n"
+"out vec4 f_color;\n"
 "void main() {\n"
+"    f_color = vec4(1.0);\n"
+float t = 1.0 - smoothstep(5.0, 6.0, 0.5)
+"            float dist = distance(v_position, vec2(-0.5 + col, -0.5 - row));\n"
+"            float delta = fwidth(dist);\n"
+"            float alpha = smoothstep(0.45 - delta, 0.45, dist);\n"
+"            v_color = mix(v_color, v_color, alpha);\n"
 "    gl_FragColor = v_color;\n"
 "}\n";
 
@@ -85,7 +94,7 @@ static GLuint create_shader(GLenum type, const GLchar *src) {
     return id;
 }
 
-static GLuint create_program(char *vert_src, char *frag_src) {
+static GLuint create_program(const char *vert_src, const char *frag_src) {
     GLuint vert = create_shader(GL_VERTEX_SHADER, vert_src);
     GLuint frag = create_shader(GL_FRAGMENT_SHADER, frag_src);
     GLuint program = glCreateProgram();
@@ -152,6 +161,83 @@ void graphics_swap() {
     SDL_GL_SwapWindow(graphics.window);
 }
 
+// Screen to OpenGL normalized coordinates
+float gl_x(float x) {
+    return -1.0f + 2.0f * x / graphics.screen_width;
+}
+
+// Screen to OpenGL normalized coordinates
+float gl_y(float y) {
+    return 1.0f - 2.0f * y / graphics.screen_height;
+}
+
+void gl_draw_triangles(GLfloat vertex_data[], GLuint index_data[], int vertex_count, int triangle_count) {
+
+    glEnable(GL_MULTISAMPLE); // TODO only need this once
+    GLuint vao, vbo, ibo;
+
+    GLint vertex_pos_location = -1, vertex_color_location = -1;
+    vertex_pos_location = glGetAttribLocation(graphics.program_2d, "position");
+    vertex_color_location = glGetAttribLocation(graphics.program_2d, "color");
+    if (vertex_pos_location == -1 || vertex_color_location == -1) {
+        return;
+    }
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, 6 * vertex_count * sizeof(GLfloat), vertex_data, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &ibo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * triangle_count * sizeof(GLuint), index_data, GL_STATIC_DRAW);
+
+    /* glBindBuffer(GL_ARRAY_BUFFER, vbo); */
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glEnableVertexAttribArray(vertex_pos_location);
+    glVertexAttribPointer(vertex_pos_location, 2, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), NULL);
+    glEnableVertexAttribArray(vertex_color_location);
+    glVertexAttribPointer(vertex_color_location, 4, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), (void*)(2*sizeof(GLfloat)));
+
+    glUseProgram(graphics.program_2d);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+    glDrawElements(GL_TRIANGLES, 3 * triangle_count, GL_UNSIGNED_INT, NULL);
+    glDisableVertexAttribArray(vertex_pos_location);
+    glUseProgram(0);
+
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &ibo);
+    glDeleteBuffers(1, &vbo);
+}
+
+void gl_draw_triangles_2(GLfloat vertex_data[], int vertex_count) {
+    GLuint vao, vbo;
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, vertex_count * 6 * sizeof(GLfloat), vertex_data, GL_STATIC_DRAW);
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    GLsizei stride = 6 * sizeof(GLfloat);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
+
+    glUseProgram(graphics.program_2d);
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, vertex_count * 6);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    glDeleteVertexArrays(1, &vao);
+    glDeleteBuffers(1, &vbo);
+}
+
 void draw_rect(Rect rect, Color color) {
     float x = (float)rect.x * 2.0f / (float)graphics.screen_width - 1.0f;
     float y = 1.0f - (float)rect.y * 2.0f / (float)graphics.screen_height;
@@ -163,8 +249,6 @@ void draw_rect(Rect rect, Color color) {
         (float)color.b / 255.0f,
         (float)color.a / 255.0f,
     };
-    GLuint vao;
-    GLuint vbo;
     GLfloat vertices[36] = {
         x, y, c[0], c[1], c[2], c[3],
         x + width, y, c[0], c[1], c[2], c[3],
@@ -174,29 +258,88 @@ void draw_rect(Rect rect, Color color) {
         x, y + height, c[0], c[1], c[2], c[3], 
     };
 
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(
-            GL_ARRAY_BUFFER,
-            36 * sizeof(GLfloat),
-            &vertices,
-            GL_STATIC_DRAW);
-    glBindVertexArray(vao);
-    GLsizei stride = 6 * sizeof(GLfloat);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (GLvoid*)(2 * sizeof(GLfloat)));
+    gl_draw_triangles_2(vertices, 6);
+}
 
-    glUseProgram(graphics.program_2d);
-    glBindVertexArray(vao);
-    glDrawArrays(GL_TRIANGLES, 0, 36);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+void gl_draw_rect(float x, float y, float w, float h, Color color) {
+    float x1 = gl_x(x);
+    float y1 = gl_y(y);
+    float x2 = gl_x(x + w);
+    float y2 = gl_y(y + h);
 
-    glDeleteVertexArrays(1, &vao);
-    glDeleteBuffers(1, &vbo);
+    float r = (float)color.r / 255.0f;
+    float g = (float)color.g / 255.0f;
+    float b = (float)color.b / 255.0f;
+    float a = (float)color.a / 255.0f;
+
+    GLfloat vertex_data[24] = {
+        x1, y1, r, g, b, a,
+        x2, y1, r, g, b, a,
+        x2, y2, r, g, b, a,
+        x1, y2, r, g, b, a,
+    };
+    GLuint index_data[] = { 0, 1, 2, 3, 0, 2 };
+
+    gl_draw_triangles(vertex_data, index_data, 4, 2);
+}
+
+void gl_draw_circle_arc(float x, float y, float cr, float theta_start, float theta_arc, Color color) {
+    int n = (int)(40.0f * theta_arc / (2*M_PI));
+    GLfloat vertex_data[(n + 2) * 6];
+    GLuint index_data[n * 3];
+    int p = 0, i = 0;
+
+    float r = (float)color.r / 255.0f;
+    float g = (float)color.g / 255.0f;
+    float b = (float)color.b / 255.0f;
+    float a = (float)color.a / 255.0f;
+
+    vertex_data[p] = gl_x(x); p++;
+    vertex_data[p] = gl_y(y); p++;
+    vertex_data[p] = r; p++;
+    vertex_data[p] = g; p++;
+    vertex_data[p] = b; p++;
+    vertex_data[p] = a; p++;
+    vertex_data[p] = gl_x(x + cr * cosf(theta_start)); p++;
+    vertex_data[p] = gl_y(y - cr * sinf(theta_start)); p++;
+    vertex_data[p] = r; p++;
+    vertex_data[p] = g; p++;
+    vertex_data[p] = b; p++;
+    vertex_data[p] = a; p++;
+    for (int t = 0; t < n; t++) {
+        float theta = theta_start + (float)(t + 1) * theta_arc / (float)n;
+        vertex_data[p] = gl_x(x + cr * cosf(theta)); p++;
+        vertex_data[p] = gl_y(y - cr * sinf(theta)); p++;
+        vertex_data[p] = r; p++;
+        vertex_data[p] = g; p++;
+        vertex_data[p] = b; p++;
+        vertex_data[p] = a; p++;
+
+        index_data[i] = 0; i++;
+        index_data[i] = t + 1; i++;
+        index_data[i] = t + 2; i++;
+    }
+
+    gl_draw_triangles(vertex_data, index_data, n + 2, n);
+}
+
+void gl_draw_rounded_rect(float x, float y, float w, float h, float cr, Color color) {
+    gl_draw_rect(x + cr, y, w - 2*cr, h, color);
+    gl_draw_rect(x, y + cr, w, h - 2*cr, color);
+
+    gl_draw_circle_arc(x + w - cr, y + cr, cr, 0.0f, M_PI_2, color);
+    gl_draw_circle_arc(x + cr, y + cr, cr, M_PI_2, M_PI_2, color);
+    gl_draw_circle_arc(x + cr, y + h - cr, cr, M_PI, M_PI_2, color);
+    gl_draw_circle_arc(x + w - cr, y + h - cr, cr, M_PI + M_PI_2, M_PI_2, color);
+}
+
+void draw_rounded_rect(Rect rect, float cr, Color color) {
+    gl_draw_rounded_rect(
+        (float)rect.x,
+        (float)rect.y,
+        (float)rect.w,
+        (float)rect.h,
+        cr, color);
 }
 
 Texture load_texture(char *filename) {
@@ -206,7 +349,6 @@ Texture load_texture(char *filename) {
     stbi_image_free(data);
     return texture;
 }
-
 
 Font load_font(char *filename) {
 

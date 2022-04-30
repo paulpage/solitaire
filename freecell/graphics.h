@@ -57,6 +57,8 @@ void draw_texture(Texture texture, Rect rect);
 void gl_draw_textures(Texture texture, Rect src_rects[], Rect dest_rects[], int count);
 void draw_text(Font font, int x, int y, Color color, char *text);
 void draw_partial_texture(Texture texture, Rect src_rect, Rect dest_rect);
+void draw_rounded_rect(Rect rect, float cr, Color color);
+void gl_draw_rounded_rect(float x, float y, float w, float h, float cr, Color color);
 void clear_screen(int r, int g, int b, int a);
 int get_screen_width();
 int get_screen_height();

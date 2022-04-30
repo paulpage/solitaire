@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
+#include <stdint.h>
 
 #include "graphics.h"
+#include "timer.h"
 
 #define MAIN_PILE_COUNT 8
 
@@ -66,7 +68,15 @@ void draw_card(Card card, Rect rect) {
         16,
     };
 
-    draw_texture(tex_card_front, rect);
+    /* draw_texture(tex_card_front, rect); */
+    Rect rect2 = rect;
+    rect2.x -= 2;
+    rect2.y -= 2;
+    rect2.w += 4;
+    rect2.h += 4;
+    /* draw_rounded_rect(rect2, 12.0f, (Color){0, 0, 0, 255}); */
+    draw_rounded_rect(rect, 10.0f, (Color){255, 255, 255, 255});
+    /* draw_rect(rect, (Color){255, 255, 255, 255}); */
     draw_partial_texture(tex_card_suits, suit_src_rect, suit_dest_rect);
 
     char *text[] = {"NONE", "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"};
@@ -180,9 +190,18 @@ int main(int argc, char **argv) {
     SDL_Event event;
     bool quit = false;
 
+    uint64_t t = get_performance_counter();
+    uint64_t t_freq = get_performance_frequency();
+
     // Main loop
     // ========================================
     while (!quit) {
+
+        uint64_t t1 = get_performance_counter();
+        float elapsed_ms = (t1 - t) / (float)(t_freq) * 1000.0f;
+        printf("Frame time: %f ms\n", elapsed_ms);
+        t = t1;
+
 
         // Update game state
         // ========================================
@@ -402,6 +421,12 @@ int main(int argc, char **argv) {
             }
         }
 
+        /* draw_cards(cards_to_draw, rects_to_draw, count); */
+        for (int i = 0; i < count; i++) {
+            draw_card(cards_to_draw[i], rects_to_draw[i]);
+        }
+
+        // TODO cards don't really overlap properly right now because draw_cards draws all the fronts then all the suits/text. Just drawing the held card separately after all the others works in this case, but a more generalized solution will require different rendering logic.
         for (int i = 0; i < 52; i++) {
             if (held_pile[i].suit == SUIT_NONE) {
                 break;
@@ -412,13 +437,11 @@ int main(int argc, char **argv) {
                 card_width - 2,
                 card_height - 2,
             };
-            /* draw_card(held_pile[i], rect); */
-            cards_to_draw[count] = held_pile[i];
-            rects_to_draw[count] = rect;
-            count++;
+            draw_card(held_pile[i], rect);
+            /* cards_to_draw[count] = held_pile[i]; */
+            /* rects_to_draw[count] = rect; */
+            /* count++; */
         }
-
-        draw_cards(cards_to_draw, rects_to_draw, count);
 
         graphics_swap();
     }
